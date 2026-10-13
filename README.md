@@ -1,8 +1,14 @@
 # KOLOTOPIR — Capítulo I: Los Ecos de los Prados
 
-Juego de acción por misiones en el navegador, ambientado en el mundo de Orom del *Dossier completo*. Los recuerdos rotos se han vuelto **Ecos** hostiles y Nilo los dispersa con el amuleto de su madre.
+Juego de acción por misiones **en 3D** (three.js) en el navegador, ambientado en el mundo de Orom del *Dossier completo*. Los recuerdos rotos se han vuelto **Ecos** hostiles y Nilo los dispersa con el amuleto de su madre.
 
 Abre `index.html` en cualquier navegador moderno. No hace falta instalar nada.
+
+## 3D
+- Isla flotante con acantilados, lago y río animados, vegetación instanciada que se mece con el viento, ciclo de día y noche con sombras y luces dinámicas (hogueras, farolas, Cápsulas).
+- Todos los modelos están hechos en código: Nilo, los humanos de la Tribu, los Kolotapires (con trompa articulada y orejas), los vidrieros, cada tipo de Eco, los Centinelas y los tres jefes.
+- Animación procedural por articulaciones: ciclo de paso con rodillas y tobillos, braceo contrario, giro de torso y balanceo; respiración y parpadeo en reposo; golpe con anticipación, impacto y recuperación (alterna brazo); lanzamiento de onda; esquiva con estiramiento; retroceso al recibir daño; caída; gestos al hablar; movimientos secundarios con muelles (trompa, orejas, pelo); colas de los Ecos con retardo, alas de polilla, embestidas, aturdimientos y apariciones elásticas.
+- Retratos 3D en los diálogos.
 
 ## Mecánicas
 - **Golpe de resonancia** cuerpo a cuerpo (J / clic), con triple de daño por la espalda a enemigos desprevenidos.
