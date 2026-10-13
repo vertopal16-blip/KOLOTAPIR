@@ -1,0 +1,2405 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!--ARTIFACT-START-->
+<title>Kolotopir</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caudex:ital,wght@0,400;0,700;1,400&family=Alegreya+Sans:ital,wght@0,400;0,500;0,700;1,400&display=swap">
+<style>
+/* Layout: lienzo del mundo a sangre completa; paneles de tinta y pergamino anclados a los bordes, nunca en el centro del juego */
+:root{
+  --ink:#15111d;
+  --ink-2:#221a2e;
+  --plum:#33273f;
+  --plum-line:#55436a;
+  --parch:#f1e5cb;
+  --parch-dim:#c5b797;
+  --amber:#e8ab58;
+  --res:#95dcea;
+  --moss:#8db574;
+  --rose:#e3887a;
+  --f-display:"Caudex","Palatino Linotype","Book Antiqua",Georgia,serif;
+  --f-body:"Alegreya Sans","Trebuchet MS","Segoe UI",system-ui,sans-serif;
+  --fs:16px;
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{margin:0;background:var(--ink);color:var(--parch);font-family:var(--f-body);font-size:var(--fs);line-height:1.45;overflow:hidden;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+body.hc{--parch-dim:#ece0c4;--plum:#000;--ink-2:#000}
+#game{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--res);outline-offset:2px}
+.hidden{display:none!important}
+
+/* HUD */
+#hud{position:fixed;left:0;right:0;top:0;padding:calc(env(safe-area-inset-top,0px) + 12px) 16px 0;display:flex;justify-content:space-between;align-items:flex-start;gap:12px;pointer-events:none}
+#objective{max-width:min(420px,60vw);background:color-mix(in srgb,var(--ink) 78%,transparent);border-left:2px solid var(--amber);padding:8px 12px;border-radius:0 6px 6px 0}
+#objective .lbl{font-size:.72em;letter-spacing:.14em;text-transform:uppercase;color:var(--amber)}
+#objective .txt{font-size:.95em;color:var(--parch)}
+#hudRight{display:flex;flex-direction:column;align-items:flex-end;gap:8px}
+#hudBtns{display:flex;gap:6px;pointer-events:auto}
+.hbtn{background:color-mix(in srgb,var(--ink) 80%,transparent);border:1px solid var(--plum-line);border-radius:6px;padding:6px 10px;font-size:.85em;color:var(--parch)}
+.hbtn kbd{font-family:var(--f-body);font-size:.8em;color:var(--parch-dim);margin-left:4px}
+#clock{font-size:.8em;color:var(--parch-dim);background:color-mix(in srgb,var(--ink) 70%,transparent);padding:3px 8px;border-radius:4px;font-variant-numeric:tabular-nums}
+#status{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.chip{font-size:.75em;letter-spacing:.06em;padding:2px 8px;border-radius:999px;border:1px solid var(--plum-line);background:color-mix(in srgb,var(--ink) 75%,transparent);color:var(--parch-dim)}
+.chip.on{border-color:var(--res);color:var(--res)}
+.chip.crouch.on{border-color:var(--moss);color:var(--moss)}
+#regionName{position:fixed;left:50%;top:22%;transform:translateX(-50%);text-align:center;pointer-events:none;opacity:0;transition:opacity .9s;width:min(90vw,640px)}
+#regionName.show{opacity:1}
+#regionName .r1{font-family:var(--f-display);font-size:clamp(28px,5vw,46px);color:var(--parch);text-shadow:0 2px 18px rgba(0,0,0,.7);text-wrap:balance}
+#regionName .r2{font-size:.85em;letter-spacing:.2em;text-transform:uppercase;color:var(--amber);text-shadow:0 1px 8px rgba(0,0,0,.8)}
+#resCue{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 128px);transform:translateX(-50%);font-size:.85em;color:var(--res);letter-spacing:.08em;pointer-events:none;text-shadow:0 1px 6px #000}
+
+#prompt{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 90px);transform:translateX(-50%);background:color-mix(in srgb,var(--ink) 85%,transparent);border:1px solid var(--plum-line);border-radius:999px;padding:6px 16px;font-size:.95em;white-space:nowrap;pointer-events:auto;cursor:pointer;max-width:calc(100vw - 32px);overflow:hidden;text-overflow:ellipsis}
+#prompt b{color:var(--amber);font-weight:700;margin-right:6px}
+#prompt.res b{color:var(--res)}
+
+#toasts{position:fixed;right:16px;bottom:calc(env(safe-area-inset-bottom,0px) + 16px);display:flex;flex-direction:column;gap:6px;align-items:flex-end;pointer-events:none;max-width:min(380px,calc(100vw - 32px))}
+.toast{background:var(--ink-2);border:1px solid var(--plum-line);border-radius:6px;padding:8px 12px;font-size:.88em;animation:tin .35s ease-out;box-shadow:0 6px 20px rgba(0,0,0,.4)}
+.toast b{color:var(--amber)}
+.toast.res b{color:var(--res)}
+@keyframes tin{from{transform:translateY(8px);opacity:0}to{transform:none;opacity:1}}
+
+/* Diálogo */
+#dialog{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 16px);width:min(760px,calc(100vw - 32px));background:linear-gradient(180deg,var(--ink-2),var(--ink));border:1px solid var(--plum-line);border-radius:10px;padding:14px 16px;display:grid;grid-template-columns:72px 1fr;gap:14px;box-shadow:0 12px 40px rgba(0,0,0,.55);cursor:pointer}
+#dialog.noport{grid-template-columns:1fr}
+#portrait{width:72px;height:72px;border-radius:8px;background:radial-gradient(circle at 50% 40%,var(--plum),var(--ink));border:1px solid var(--plum-line)}
+#dialog.noport #portrait{display:none}
+#dlgBody{min-width:0}
+#dlgName{font-family:var(--f-display);font-size:1.1em;color:var(--amber);margin-bottom:2px}
+#dlgName.voice{color:var(--res);font-style:italic}
+#dlgText{font-size:1.05em;min-height:2.9em;color:var(--parch)}
+#dlgText.narr{font-style:italic;color:var(--parch-dim)}
+#dlgOpts{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+.opt{text-align:left;background:color-mix(in srgb,var(--plum) 70%,transparent);border:1px solid var(--plum-line);border-radius:6px;padding:8px 12px;font-size:.98em}
+.opt:hover,.opt:focus-visible{border-color:var(--amber);background:var(--plum)}
+.opt .n{color:var(--amber);margin-right:8px;font-variant-numeric:tabular-nums}
+#dlgMore{position:absolute;right:14px;bottom:10px;color:var(--amber);font-size:.8em;animation:blink 1.2s infinite}
+@keyframes blink{50%{opacity:.25}}
+
+/* Fragmento de resonancia */
+#frag{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:24px 16px;background:radial-gradient(ellipse at center,rgba(30,50,90,.72),rgba(8,8,20,.92));cursor:pointer}
+#fragBox{width:min(620px,100%);display:flex;flex-direction:column;gap:12px}
+#fragType{font-size:.75em;letter-spacing:.22em;text-transform:uppercase;color:var(--res)}
+#fragPlace{font-family:var(--f-display);font-size:clamp(22px,4vw,32px);color:var(--parch);text-wrap:balance}
+#fragLines{display:flex;flex-direction:column;gap:10px;min-height:8em}
+#fragLines p{margin:0;font-size:1.08em;line-height:1.5;color:#dceff3;animation:fl .9s ease-out}
+#fragLines p.v{font-family:var(--f-display);font-style:italic;color:var(--parch)}
+@keyframes fl{from{opacity:0;filter:blur(4px);transform:translateY(4px)}to{opacity:1;filter:none;transform:none}}
+#fragHint{font-size:.8em;color:var(--parch-dim);letter-spacing:.08em}
+
+/* Pantallas grandes */
+.screen{position:fixed;inset:0;display:flex;padding:24px 16px;overflow:auto}
+.screen>*{margin:auto}
+#title{background:linear-gradient(180deg,rgba(15,12,24,.25),rgba(15,12,24,.85) 70%)}
+#titleBox{width:min(560px,100%);display:flex;flex-direction:column;gap:18px}
+#logo{font-family:var(--f-display);font-weight:700;font-size:clamp(46px,11vw,96px);line-height:.9;letter-spacing:.04em;color:var(--parch);text-shadow:0 4px 30px rgba(0,0,0,.6)}
+#logo span{color:var(--amber)}
+.kicker{font-size:.8em;letter-spacing:.24em;text-transform:uppercase;color:var(--res)}
+.lede{font-size:1.05em;color:var(--parch-dim);max-width:46ch}
+.menu{display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+.mbtn{background:transparent;border:none;border-left:2px solid transparent;padding:6px 12px;font-family:var(--f-display);font-size:1.35em;color:var(--parch);text-align:left}
+.mbtn:hover,.mbtn:focus-visible{border-left-color:var(--amber);color:var(--amber);outline:none}
+.mbtn[disabled]{opacity:.35;cursor:default}
+.mbtn small{display:block;font-family:var(--f-body);font-size:.6em;color:var(--parch-dim)}
+.fine{font-size:.78em;color:var(--parch-dim)}
+
+.panel{width:min(820px,100%);max-height:calc(100% - 16px);background:var(--ink);border:1px solid var(--plum-line);border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.6);display:flex;flex-direction:column;overflow:hidden}
+.panel header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 18px;border-bottom:1px solid var(--plum-line);background:var(--ink-2)}
+.panel h2{margin:0;font-family:var(--f-display);font-weight:400;font-size:1.5em;color:var(--parch)}
+.close{background:none;border:1px solid var(--plum-line);border-radius:6px;padding:4px 10px;color:var(--parch-dim)}
+.tabs{display:flex;gap:2px;padding:0 12px;border-bottom:1px solid var(--plum-line);overflow-x:auto;flex-shrink:0}
+.tab{background:none;border:none;border-bottom:2px solid transparent;padding:10px 12px;color:var(--parch-dim);white-space:nowrap;font-size:.95em}
+.tab.on{color:var(--amber);border-bottom-color:var(--amber)}
+.tab .count{font-size:.75em;color:var(--parch-dim);margin-left:4px;font-variant-numeric:tabular-nums}
+.pbody{padding:16px 18px 22px;overflow:auto;-webkit-user-select:text;user-select:text}
+.pbody h3{font-family:var(--f-display);font-weight:400;font-size:1.25em;margin:0 0 4px;color:var(--parch);text-wrap:balance}
+.pbody p{margin:0 0 8px;max-width:68ch}
+.entries{display:flex;flex-direction:column;gap:14px}
+.entry{padding-bottom:14px;border-bottom:1px dashed var(--plum-line);min-width:0}
+.entry:last-child{border-bottom:none}
+.meta{font-size:.75em;letter-spacing:.14em;text-transform:uppercase;color:var(--parch-dim);margin-bottom:4px}
+.tag{display:inline-block;font-size:.72em;letter-spacing:.12em;text-transform:uppercase;padding:1px 7px;border-radius:999px;border:1px solid currentColor;margin-right:6px}
+.t-Ambiental{color:var(--moss)}.t-Personal{color:var(--amber)}.t-Material{color:#d7b8f0}.t-Contradictoria{color:var(--rose)}.t-Profunda{color:var(--res)}
+.quote{font-style:italic;color:var(--parch-dim);border-left:2px solid var(--plum-line);padding-left:10px;margin:6px 0}
+.empty{color:var(--parch-dim);font-style:italic}
+.know{color:var(--moss)}.suspect{color:var(--amber)}
+.hyp{display:flex;flex-direction:column;gap:8px;margin:12px 0}
+.hyp button{text-align:left;background:var(--ink-2);border:1px solid var(--plum-line);border-radius:6px;padding:10px 12px}
+.hyp button:hover{border-color:var(--amber)}
+.hyp button.wrongt{border-color:var(--rose);opacity:.7}
+.ev{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;font-size:.92em;margin:8px 0}
+.ev .ok{color:var(--moss)}.ev .no{color:var(--plum-line)}
+.small-btn{background:var(--plum);border:1px solid var(--plum-line);border-radius:6px;padding:6px 12px;font-size:.9em}
+#atlasWrap{overflow-x:auto}
+#atlas{display:block;max-width:100%;border-radius:8px;border:1px solid var(--plum-line);image-rendering:auto}
+.legend{display:flex;flex-wrap:wrap;gap:10px 18px;font-size:.85em;color:var(--parch-dim);margin-top:10px}
+
+.setrow{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 0;border-bottom:1px dashed var(--plum-line);flex-wrap:wrap}
+.setrow label{min-width:0}
+.seg{display:flex;gap:4px;flex-wrap:wrap}
+.seg button{background:var(--ink-2);border:1px solid var(--plum-line);border-radius:6px;padding:5px 10px;font-size:.9em}
+.seg button.on{border-color:var(--amber);color:var(--amber)}
+.keys{display:grid;grid-template-columns:auto 1fr;gap:6px 16px;font-size:.95em}
+.keys kbd{font-family:var(--f-body);background:var(--ink-2);border:1px solid var(--plum-line);border-bottom-width:2px;border-radius:4px;padding:1px 7px;font-size:.9em;white-space:nowrap}
+
+#ending{background:rgba(10,8,18,.88)}
+#endBox{width:min(640px,100%);display:flex;flex-direction:column;gap:14px}
+#endList{display:flex;flex-direction:column;gap:10px}
+#endList div{border-left:2px solid var(--plum-line);padding-left:12px}
+#endList b{display:block;font-size:.75em;letter-spacing:.14em;text-transform:uppercase;color:var(--amber);font-weight:500}
+.stats{display:flex;gap:22px;flex-wrap:wrap;font-variant-numeric:tabular-nums;color:var(--parch-dim);font-size:.9em}
+.stats strong{display:block;font-family:var(--f-display);font-size:1.6em;color:var(--parch);font-weight:400}
+
+#intro{background:var(--ink);cursor:pointer}
+#introText{font-family:var(--f-display);font-size:clamp(20px,3.4vw,30px);line-height:1.4;max-width:30ch;text-align:left;color:var(--parch);animation:fl 1.4s ease-out}
+#introHint{position:fixed;bottom:calc(env(safe-area-inset-bottom,0px) + 24px);left:16px;right:16px;text-align:center;font-size:.8em;color:var(--parch-dim);letter-spacing:.1em}
+
+/* Controles táctiles */
+#touch{position:fixed;inset:0;pointer-events:none}
+#stick{position:fixed;width:110px;height:110px;border-radius:50%;border:2px solid rgba(241,229,203,.25);background:rgba(21,17,29,.25);transform:translate(-50%,-50%);display:none}
+#knob{position:absolute;left:50%;top:50%;width:46px;height:46px;margin:-23px 0 0 -23px;border-radius:50%;background:rgba(241,229,203,.35)}
+#tbtns{position:fixed;right:16px;bottom:calc(env(safe-area-inset-bottom,0px) + 18px);display:grid;grid-template-columns:repeat(2,64px);gap:10px;pointer-events:auto}
+.tb{width:64px;height:64px;border-radius:50%;border:1px solid var(--plum-line);background:color-mix(in srgb,var(--ink) 75%,transparent);font-size:.78em;line-height:1.1;color:var(--parch)}
+.tb.on{border-color:var(--res);color:var(--res)}
+.tb.use{border-color:var(--amber);color:var(--amber)}
+body:not(.playing) #touch{display:none}
+body.touch #toasts{bottom:auto;top:calc(env(safe-area-inset-top,0px) + 120px)}
+body.touch #prompt{bottom:calc(env(safe-area-inset-bottom,0px) + 170px)}
+body.touch #resCue{bottom:calc(env(safe-area-inset-bottom,0px) + 214px)}
+body.touch .hbtn kbd{display:none}
+
+@media (max-width:560px){
+  #objective{max-width:58vw;font-size:.9em}
+  #dialog{grid-template-columns:52px 1fr;gap:10px;padding:12px}
+  #portrait{width:52px;height:52px}
+  .hbtn{padding:6px 8px}
+}
+@media (prefers-reduced-motion:reduce){
+  *{animation-duration:.01ms!important;transition-duration:.01ms!important}
+}
+</style>
+<!--ARTIFACT-HEAD-END-->
+</head>
+<body>
+<!--ARTIFACT-BODY-START-->
+<canvas id="game" aria-label="Mundo de Orom"></canvas>
+
+<div id="hud" class="hidden">
+  <div id="objective"><div class="lbl">Objetivo</div><div class="txt" id="objText"></div></div>
+  <div id="hudRight">
+    <div id="hudBtns">
+      <button class="hbtn" id="bNote" type="button">Cuaderno<kbd>Tab</kbd></button>
+      <button class="hbtn" id="bMenu" type="button">Menú<kbd>Esc</kbd></button>
+    </div>
+    <div id="clock"></div>
+    <div id="status"><span class="chip" id="chipListen">Escucha</span><span class="chip crouch" id="chipCrouch">Agachado</span></div>
+  </div>
+</div>
+<div id="regionName"><div class="r2" id="regionSub"></div><div class="r1" id="regionTitle"></div></div>
+<div id="resCue" class="hidden"></div>
+<div id="prompt" class="hidden"></div>
+<div id="toasts" aria-live="polite"></div>
+
+<div id="dialog" class="hidden" role="dialog" aria-live="polite">
+  <canvas id="portrait" width="144" height="144"></canvas>
+  <div id="dlgBody">
+    <div id="dlgName"></div>
+    <div id="dlgText"></div>
+    <div id="dlgOpts"></div>
+  </div>
+  <div id="dlgMore">▸</div>
+</div>
+
+<div id="frag" class="hidden" role="dialog">
+  <div id="fragBox">
+    <div id="fragType"></div>
+    <div id="fragPlace"></div>
+    <div id="fragLines"></div>
+    <div id="fragHint">Pulsa E, Espacio o toca para continuar</div>
+  </div>
+</div>
+
+<div id="intro" class="screen hidden"><div id="introText"></div><div id="introHint">Toca o pulsa cualquier tecla</div></div>
+
+<div id="title" class="screen">
+  <div id="titleBox">
+    <div class="kicker">Capítulo I · Los Prados que Recuerdan</div>
+    <div id="logo">KOLO<span>TOPIR</span></div>
+    <p class="lede">Orom recuerda. Los prados guardan pasos, el agua guarda voces y en las Cápsulas duermen sueños que nadie terminó de vivir. Nilo sale de la Tribu del Reverso para averiguar qué les pasó a sus padres.</p>
+    <div class="menu">
+      <button class="mbtn" id="tContinue" type="button">Continuar<small id="tContinueInfo"></small></button>
+      <button class="mbtn" id="tNew" type="button">Nueva partida</button>
+      <button class="mbtn" id="tControls" type="button">Controles</button>
+      <button class="mbtn" id="tSettings" type="button">Ajustes y accesibilidad</button>
+    </div>
+    <p class="fine">Aventura de exploración, escucha y decisiones. Sin combate. La partida se guarda sola en este navegador.</p>
+  </div>
+</div>
+
+<div id="menu" class="screen hidden" style="background:rgba(10,8,18,.7)">
+  <div id="menuBox" class="menu" style="background:var(--ink);border:1px solid var(--plum-line);border-radius:12px;padding:22px 24px;min-width:min(320px,100%)">
+    <div class="kicker" style="margin-bottom:6px">Pausa</div>
+    <button class="mbtn" id="mResume" type="button">Seguir jugando</button>
+    <button class="mbtn" id="mNote" type="button">Cuaderno de campo</button>
+    <button class="mbtn" id="mControls" type="button">Controles</button>
+    <button class="mbtn" id="mSettings" type="button">Ajustes y accesibilidad</button>
+    <button class="mbtn" id="mTitle" type="button">Guardar y volver al título</button>
+  </div>
+</div>
+
+<div id="notebook" class="screen hidden" style="background:rgba(10,8,18,.7)">
+  <div class="panel">
+    <header><h2>Cuaderno de campo de Nilo</h2><button class="close" id="nbClose" type="button">Cerrar</button></header>
+    <div class="tabs" id="nbTabs"></div>
+    <div class="pbody" id="nbBody"></div>
+  </div>
+</div>
+
+<div id="settings" class="screen hidden" style="background:rgba(10,8,18,.7)">
+  <div class="panel" style="width:min(560px,100%)">
+    <header><h2 id="setTitle">Ajustes</h2><button class="close" id="setClose" type="button">Cerrar</button></header>
+    <div class="pbody" id="setBody"></div>
+  </div>
+</div>
+
+<div id="ending" class="screen hidden">
+  <div id="endBox">
+    <div class="kicker">Fin del capítulo I</div>
+    <div style="font-family:var(--f-display);font-size:clamp(30px,6vw,48px);line-height:1.05">Los Prados que Recuerdan</div>
+    <p class="lede" id="endLede"></p>
+    <div id="endList"></div>
+    <div class="stats" id="endStats"></div>
+    <p class="fine">Próximo capítulo: la Ciudad de las Mil Cápsulas. Tres finales esperan en el Umbral Dormido: Integración, Ruptura y El reverso.</p>
+    <div class="menu" style="flex-direction:row;flex-wrap:wrap">
+      <button class="mbtn" id="eRoam" type="button">Seguir explorando</button>
+      <button class="mbtn" id="eNew" type="button">Nueva partida</button>
+    </div>
+  </div>
+</div>
+
+<div id="touch" class="hidden">
+  <div id="stick"><div id="knob"></div></div>
+  <div id="tbtns">
+    <button class="tb" id="tbListen" type="button">Escuchar</button>
+    <button class="tb use" id="tbUse" type="button">Usar</button>
+    <button class="tb" id="tbCrouch" type="button">Agacharse</button>
+    <button class="tb" id="tbRun" type="button">Correr</button>
+  </div>
+</div>
+
+<script>
+(() => {
+'use strict';
+
+/* ================================================================
+   CONSTANTES Y MUNDO
+   ================================================================ */
+const T = 32;            // píxeles de mundo por casilla
+const W = 96, H = 72;    // casillas
+const VOID=0, GRASS=1, FLOW=2, WATER=3, ROCK=4, PATH=5, DIRT=6, BRIDGE=7, STONE=8, ROOTS=9, GATE=10, RED=11, SAND=12;
+const tiles = new Uint8Array(W*H);
+const block = new Uint8Array(W*H);
+const idx = (x,y) => y*W + x;
+const tileAt = (x,y) => (x<0||y<0||x>=W||y>=H) ? VOID : tiles[idx(x,y)];
+const clamp = (v,a,b) => v<a?a:v>b?b:v;
+const lerp = (a,b,t) => a+(b-a)*t;
+const dist = (ax,ay,bx,by) => Math.hypot(ax-bx, ay-by);
+
+function hash(x,y,s){
+  let h = (Math.imul(x|0,374761393) + Math.imul(y|0,668265263) + Math.imul((s|0)+1,982451653))|0;
+  h = Math.imul(h ^ (h>>>13), 1274126177);
+  h ^= h>>>16;
+  return (h>>>0)/4294967296;
+}
+const sm = t => t*t*(3-2*t);
+function vnoise(x,y,s){
+  const xi=Math.floor(x), yi=Math.floor(y), u=sm(x-xi), v=sm(y-yi);
+  const a=hash(xi,yi,s), b=hash(xi+1,yi,s), c=hash(xi,yi+1,s), d=hash(xi+1,yi+1,s);
+  return a+(b-a)*u+(c-a)*v+(a-b-c+d)*u*v;
+}
+const fbm = (x,y,s) => vnoise(x,y,s)*.6 + vnoise(x*2,y*2,s+7)*.3 + vnoise(x*4,y*4,s+13)*.1;
+
+const TRIBE = {x:16, y:58, r:10.8};
+const GATE_P = {x:23.6, y:50.4};
+const ROOT_P = {x:16, y:47.2};
+const LAKE = {x:36, y:22, rx:6.5, ry:4.2};
+const MUSGO_HOME = {x:71.5, y:30.5};
+const riverX = y => 71.5 + Math.sin(y*.21)*1.1;
+
+const trees = [];
+const huts = [];
+
+function inTribe(x,y,pad=0){ return dist(x,y,TRIBE.x,TRIBE.y) < TRIBE.r - .2 + pad; }
+
+function genWorld(){
+  for (let y=0;y<H;y++) for (let x=0;x<W;x++){
+    const cx=x+.5, cy=y+.5;
+    const dx=(cx-48)/46, dy=(cy-37)/33;
+    const n=fbm(x*.12,y*.12,1);
+    let land = dx*dx+dy*dy < 1-(n-.5)*.55;
+    const td = dist(cx,cy,TRIBE.x,TRIBE.y);
+    if (td < TRIBE.r+1.6) land = true;
+    if (!land){ tiles[idx(x,y)]=VOID; continue; }
+    let t = fbm(x*.25,y*.25,3) > .6 ? FLOW : GRASS;
+    if (cx>=38 && cy>=50 && cx<69) t = fbm(x*.22,y*.22,9) > .52 ? RED : SAND;
+    if (cx>=74) t = STONE;
+    if (td < TRIBE.r-.2) t = fbm(x*.3,y*.3,5) > .6 ? GRASS : DIRT;
+    else if (td < TRIBE.r+1.2) t = ROCK;
+    // lago
+    const lx=(cx-LAKE.x)/LAKE.rx, ly=(cy-LAKE.y)/LAKE.ry, ln=lx*lx+ly*ly+(fbm(x*.3,y*.3,17)-.5)*.4;
+    if (ln<1) t=WATER; else if (ln<1.32 && t!==ROCK) t=SAND;
+    tiles[idx(x,y)] = t;
+  }
+  // río que corta toda la isla
+  for (let y=0;y<H;y++){
+    const rx=riverX(y+.5);
+    for (let x=60;x<80;x++){
+      if (tileAt(x,y)===VOID) continue;
+      const d=Math.abs(x+.5-rx);
+      if (d<1.9) tiles[idx(x,y)] = (y>=29 && y<=31) ? BRIDGE : WATER;
+      else if (d<2.6 && tiles[idx(x,y)]!==RED) tiles[idx(x,y)] = SAND;
+    }
+  }
+  for (let y=29;y<=31;y++) for (let x=69;x<=73;x++) if (tileAt(x,y)!==VOID && Math.abs(x+.5-riverX(y+.5))<2.3) tiles[idx(x,y)]=BRIDGE;
+  // puerta y raíces en el anillo de roca
+  carve(21.4,52.6,25.8,48.2,1.05,GATE);
+  carve(16,49,16,45.4,1.0,ROOTS);
+  // caminos
+  const paths = [
+    [[22,52.5],[25.5,48.5],[28,46],[32,41],[37,38],[41,36.8],[46,34],[56,31.5],[64,30.5],[69,30.5]],
+    [[73.5,30.5],[77,30],[81,28],[84,26.5]],
+    [[81,28],[85,20],[86,13]],
+    [[46,34],[48,27],[50,21.5]],
+    [[16,46],[18,43],[24,41.5],[32,41]],
+    [[41,36.8],[44,40],[52,39],[58,39.5]],
+    [[16,57],[16,51],[16,49]],
+    [[12,61],[16,59],[21,53]]
+  ];
+  for (const p of paths) for (let i=0;i<p.length-1;i++) paintLine(p[i][0],p[i][1],p[i+1][0],p[i+1][1],.95);
+  // huecos del arco en ruinas
+  tiles[idx(30,34)] = ROCK; tiles[idx(33,34)] = ROCK;
+}
+function carve(x0,y0,x1,y1,r,type){
+  const n=Math.ceil(dist(x0,y0,x1,y1)/.2);
+  for (let i=0;i<=n;i++){
+    const px=lerp(x0,x1,i/n), py=lerp(y0,y1,i/n);
+    for (let y=Math.floor(py-r);y<=py+r;y++) for (let x=Math.floor(px-r);x<=px+r;x++){
+      if (dist(x+.5,y+.5,px,py)<=r && tileAt(x,y)===ROCK) tiles[idx(x,y)]=type;
+    }
+  }
+}
+function paintLine(x0,y0,x1,y1,r){
+  const n=Math.ceil(dist(x0,y0,x1,y1)/.25);
+  for (let i=0;i<=n;i++){
+    const px=lerp(x0,x1,i/n), py=lerp(y0,y1,i/n);
+    for (let y=Math.floor(py-r);y<=py+r;y++) for (let x=Math.floor(px-r);x<=px+r;x++){
+      if (dist(x+.5,y+.5,px,py)>r) continue;
+      const t=tileAt(x,y);
+      if (t===GRASS||t===FLOW||t===SAND||t===DIRT||t===STONE) tiles[idx(x,y)]=PATH;
+    }
+  }
+}
+
+/* ================================================================
+   DATOS NARRATIVOS
+   ================================================================ */
+const CAST = {
+  nilo:{name:'Nilo', kind:'human', hair:'#3b2518', skin:'#c8956e', cloth:'#e7d7b6', bag:true},
+  teia:{name:'Teia', kind:'human', hair:'#ddd6ca', skin:'#8a5a3c', cloth:'#86513d', old:true},
+  lio:{name:'Lio', kind:'human', hair:'#1d1410', skin:'#a8714c', cloth:'#5f7d58'},
+  maru:{name:'Maru', kind:'human', hair:'#7a4225', skin:'#e2b28c', cloth:'#9c6a8a'},
+  boro:{name:'Boro', kind:'kolo', fur:'#5d4c47', robe:'#cdb88f', scarf:'#c0603a', bag:true},
+  pim:{name:'Pim', kind:'kolo', fur:'#6f5c55', robe:'#7aa07a', scarf:'#e0c070', small:true},
+  tolo:{name:'Tolo', kind:'kolo', fur:'#4f413e', robe:'#d8cdb4', scarf:'#5a7fb0'},
+  oru:{name:'Madre Oru', kind:'kolo', fur:'#7b6c66', robe:'#e8dcc4', scarf:'#3f6a5a', staff:true},
+  guard:{name:'Custodio de la puerta', kind:'kolo', fur:'#463a38', robe:'#3d4a6b', scarf:'#c9a24a'},
+  miga:{name:'Miga', kind:'miga'},
+  eira:{name:'Eira', kind:'voice'},
+  daren:{name:'Daren', kind:'voice'},
+  custodio:{name:'El Primer Custodio', kind:'voice'},
+  carta:{name:'Carta de Eira y Daren', kind:'letter'},
+  narr:{name:'', kind:'none'}
+};
+
+const ITEMS = {
+  letter:{name:'Carta de Eira y Daren', desc:'«No dejes que te cuenten que las Cápsulas son solo peligro. Tampoco que son solo un regalo. Son memoria, y la memoria se puede cuidar o se puede usar.»'},
+  amulet:{name:'Amuleto familiar', desc:'Cerámica con un ojo grabado. Era de tu abuela. Vibra cerca de los lugares que recuerdan y te permite la Escucha de Resonancias.'},
+  notebook:{name:'Cuaderno roto de Eira', desc:'Última página: «Día 38. Oru tenía razón: el registro de la Vigilia fue cambiado. Borraron a los que se negaron a dormir. Tengo que ver el Archivo con mis propios ojos. D. dice que es peligroso. Lo es.»'},
+  button:{name:'Botón de cerámica', desc:'Un botón azul sin abrigo. Para la colección de Boro.'},
+  key:{name:'Llave sin cerradura', desc:'Ninguna puerta conocida la reconoce. Para la colección de Boro.'},
+  bell:{name:'Campanilla rajada', desc:'Suena desafinada, pero suena. Para la colección de Boro.'},
+  flower:{name:'Flor de eco', desc:'Se abre de noche y repite en susurros lo que oye. Su olor a lluvia calma a los musgosos.'},
+  pin:{name:'Horquilla de hueso', desc:'Tallada con una espiral, el mismo símbolo del altar de la Tribu. Era de Eira.'}
+};
+
+const CHARS = {
+  teia:{name:'Teia', role:'Anciana de la Tribu del Reverso', text:'Cuida el fuego comunal y los silencios de la Tribu. Cree que callar protege; sabe más de lo que dice.'},
+  lio:{name:'Lio', role:'Amigo de Nilo', text:'Roba higos agachado y jura haber visto luces junto a las raíces del norte la noche en que tus padres se fueron.'},
+  maru:{name:'Maru', role:'Tejedora de la Tribu', text:'Teje una manta con un hilo por cada región que la Tribu no verá nunca. Eira le enseñó un punto llamado «puente».'},
+  eira:{name:'Eira', role:'Madre de Nilo · intérprete de Cápsulas', text:'Estudiaba las Cápsulas. Desapareció hace cuarenta días junto a Daren.'},
+  daren:{name:'Daren', role:'Padre de Nilo · nacido en el Reverso', text:'Quería proteger a Nilo del secreto de las Cápsulas. Desapareció con Eira.'},
+  boro:{name:'Boro', role:'Kolotapir viajero y coleccionista', text:'Colecciona objetos que otros creen inútiles. Renunció a unos recuerdos para proteger a alguien.'},
+  pimtolo:{name:'Pim y Tolo', role:'Kolotapires de los Prados', text:'Llevan toda la tarde discutiendo cómo se llama una nube.'},
+  miga:{name:'Miga', role:'Polilla de papel negro', text:'Nació entre fragmentos descartados de Cápsulas antiguas. Revolotea hacia los recuerdos que aún no has escuchado.'},
+  oru:{name:'Madre Oru', role:'Archivista de las Cápsulas', text:'Guarda registros prohibidos a las puertas de la Ciudad de las Mil Cápsulas. Conoció bien a Eira.'},
+  custodio:{name:'El Primer Custodio', role:'Señor de las Cápsulas', text:'Quiere conectar todas las Cápsulas en un solo sueño sin dolor. Lo mueve un duelo: perdió a quien más quería.'}
+};
+
+const BEASTS = {
+  vidriero:{name:'Vidriero', text:'Herbívoro de cuerpo translúcido. Huye de los pasos rápidos; si te acercas agachado, se vuelve curioso.'},
+  musgoso:{name:'Musgoso', text:'Grande como una choza y tímido como un ratón. Los pasos fuertes lo asustan. Duerme de noche, curvado sobre sí mismo.'},
+  flor:{name:'Flor de eco', text:'Solo se abre de noche junto al lago. Repite susurros y huele a lluvia. Calma a los musgosos.'},
+  miga:{name:'Polilla de papel', text:'Criaturas nacidas de restos de Cápsulas. Se sienten atraídas por los recuerdos sin escuchar.'}
+};
+
+const RES = {
+  houseNight:{type:'Personal', place:'Puerta de la casa de tus padres', lines:[
+    ['daren','«No tiene por qué saberlo todavía. Tiene dieciséis años, Eira.»'],
+    ['eira','«A los dieciséis yo ya leía Cápsulas. Si no volvemos, merece una verdad, no un silencio.»'],
+    ['daren','«Entonces volveremos. Los dos.»']],
+    summary:'Daren quería proteger a Nilo del secreto; Eira quería contarle la verdad.'},
+  gateSteps:{type:'Ambiental', place:'Puerta del Reverso', lines:[
+    [null,'Noche. Viento entre los troncos de la puerta.'],
+    [null,'Dos pares de pasos se acercan... y se detienen.'],
+    ['daren','«Por aquí no. Teia duerme con un ojo abierto.»'],
+    [null,'Los pasos giran hacia el norte, pegados a la pared de roca, hasta el altar.']],
+    summary:'Tus padres no salieron por la puerta: siguieron la roca hacia el norte, hasta el altar y las raíces.'},
+  archOld:{type:'Ambiental', place:'El arco en ruinas', lines:[
+    [null,'Un prado lleno de durmientes. Kolotapires y humanos tumbados en la hierba, muy juntos.'],
+    [null,'Un niño despierta llorando: «¡Ese sueño no era mío!».'],
+    [null,'Alguien le responde, muy cansado: «Ya nadie sabe cuál es de quién».']],
+    summary:'La Gran Vigilia: los sueños se filtraban de una persona a otra.'},
+  fragments:{type:'Material', place:'Montón de láminas negras', lines:[
+    [null,'Cientos de recuerdos rotos murmuran a la vez: una canción, olor a pan, un nombre que nadie pronuncia.'],
+    [null,'Las láminas tiemblan. Algo pequeño se abre paso entre ellas.'],
+    [null,'Una polilla de papel negro sale aleteando, te mira y decide quedarse.']],
+    summary:'Restos de Cápsulas antiguas, descartados. De ellos nació Miga.'},
+  lakeEcho:{type:'Ambiental', place:'Orilla sur del lago', lines:[
+    [null,'Chapoteos. Risas de crías de Kolotapir.'],
+    [null,'«¡El último en llegar al agua olvida su nombre!»'],
+    [null,'Nadie olvidó nada aquel día. El lago lo recuerda igual.']],
+    summary:'Un recuerdo alegre que el lago conserva. No todo lo que guarda Orom es dolor.'},
+  campSteps:{type:'Ambiental', place:'Campamento abandonado', lines:[
+    [null,'Dos rastros salen del campamento hacia el puente del este.'],
+    [null,'Uno avanza a paso firme y regular, sin dudar.'],
+    [null,'El otro sale más tarde, con zancadas largas e irregulares: alguien que corre.'],
+    [null,'No hay marcas de arrastre. No hay señales de lucha.']],
+    summary:'Una persona caminó tranquila hacia el puente; otra corrió detrás. Nadie fue arrastrado.'},
+  campScarf:{type:'Personal', place:'Bufanda de Daren', lines:[
+    [null,'Respiración agitada. Una bufanda que se suelta y cae a la hierba.'],
+    ['daren','«¡Eira, espera! ¡No vayas sola!»'],
+    [null,'Pasos que corren hacia el este, cada vez más lejos.']],
+    summary:'Daren corrió detrás de Eira. Ella iba delante.'},
+  campCapsule:{type:'Contradictoria', place:'Cápsula dañada del campamento', lines:[
+    [null,'Una voz plana, como si leyera: «Registro de Custodia 4-112».'],
+    ['voice','«Dos humanos sin registro fueron conducidos por la fuerza a la Ciudad. Así consta.»'],
+    [null,'La frase se repite. Cada vez la pausa cae en un lugar distinto.'],
+    [null,'Las imágenes no acompañan a las palabras: solo se ve hierba vacía.']],
+    summary:'El registro oficial dice que se los llevaron por la fuerza. Las imágenes no lo muestran.'},
+  boroCapsule:{type:'Personal', place:'Cápsula sellada de Boro', lines:[
+    ['eira','«Boro, si los Custodios te leen, me encontrarán.»'],
+    ['eira','«Olvida que me has visto. Olvida el cuaderno y el camino.»'],
+    [null,'Boro, más joven: «¿Y si al olvidar me pierdo a mí mismo?».'],
+    ['eira','«Te quedarán tus cosas inútiles. Ellas recordarán por ti.»']],
+    summary:'Boro olvidó a propósito para proteger a Eira.'},
+  cityStable:{type:'Material', place:'Cápsula de cumpleaños', lines:[
+    [null,'Un pastel de raíces dulces. Doce Kolotapires cantando, todos desafinados.'],
+    [null,'Alguien sopla las velas y una lluvia de pétalos cae del techo.'],
+    [null,'El recuerdo está gastado de tanto prestarlo, pero sigue siendo cálido.']],
+    summary:'Una Cápsula estable de acceso libre: recuerdos compartidos por gusto.'},
+  archive:{type:'Profunda', place:'Cápsula Archivo', lines:[
+    [null,'Una sala inmensa. Miles de Cápsulas laten a la vez, como un solo corazón.'],
+    ['custodio','«Nadie volverá a perder a nadie. Conectaremos todas las Cápsulas en un solo sueño, sin dolor.»'],
+    ['eira','«Eso no es proteger. Es decidir por todos.»'],
+    ['custodio','«Yo perdí a quien más quería, Eira. Tú harías lo mismo.»'],
+    ['daren','«Eira, hay que irse. Al Umbral Dormido. Allí empezó todo.»'],
+    [null,'El fragmento se apaga con un rumor de agua.']],
+    summary:'Eira y Daren huyeron hacia el Umbral Dormido para detener el plan del Primer Custodio.'}
+};
+const RES_ORDER = ['houseNight','gateSteps','archOld','fragments','lakeEcho','campSteps','campScarf','campCapsule','boroCapsule','cityStable','archive'];
+
+const MYSTERY = {
+  q:'¿Qué ocurrió en el campamento de Eira y Daren?',
+  evidence:[
+    {id:'campSteps', label:'Huellas del campamento (Resonancia ambiental)'},
+    {id:'campScarf', label:'Bufanda de Daren (Resonancia personal)'},
+    {id:'campCapsule', label:'Cápsula dañada (Resonancia contradictoria)'},
+    {id:'campNotebook', label:'Cuaderno roto de Eira'},
+    {id:'boroWitness', label:'Testimonio de Boro'}
+  ],
+  need:3,
+  options:[
+    {id:'force', text:'Los Custodios se los llevaron por la fuerza.', wrong:'Las huellas no muestran arrastre ni lucha: una persona camina a paso firme y otra corre detrás. Solo la Cápsula habla de fuerza, y esa Cápsula está dañada.'},
+    {id:'fled', text:'Huyeron juntos de Orom y abandonaron su investigación.', wrong:'El cuaderno dice que Eira quería ver el Archivo con sus propios ojos, y los rastros van hacia el puente de la Ciudad, no lejos de ella.'},
+    {id:'truth', text:'Eira fue por voluntad propia hacia la Ciudad, Daren corrió tras ella y el registro de la Cápsula fue alterado.'}
+  ],
+  hints:[
+    'Activa la Escucha cerca del campamento: las huellas brillan. ¿Cómo se mueve cada persona?',
+    'Una de tus fuentes está «Dañada». ¿Cuánto puedes fiarte de lo que dice?',
+    'Lee el cuaderno de Eira: ¿adónde quería ir y por qué?'
+  ]
+};
+
+/* ================================================================
+   ENTIDADES
+   ================================================================ */
+const ents = [];
+function E(o){ ents.push(o); return o; }
+function buildEntities(){
+  // chozas de la Tribu (tx,ty esquina sup-izq, 2x2)
+  const hutDefs = [
+    {id:'home', tx:12, ty:55, roof:'#9a6a3a'},
+    {id:'h2', tx:19, ty:59, roof:'#86603c'},
+    {id:'h3', tx:11, ty:63, roof:'#a07448'},
+    {id:'h4', tx:20, ty:54, roof:'#8d6440'},
+    {id:'h5', tx:7, ty:58, roof:'#916a43'}
+  ];
+  for (const h of hutDefs){ huts.push(h); for (let y=h.ty;y<h.ty+2;y++) for (let x=h.tx;x<h.tx+2;x++) block[idx(x,y)]=1; }
+  E({id:'homeDoor', type:'door', x:13.5, y:57.3});
+  E({id:'fireTribe', type:'fire', x:16, y:57.6});
+  E({id:'altar', type:'altar', x:17.6, y:49.6});
+  block[idx(17,49)]=1;
+  E({id:'gate', type:'gatedesc', x:22.6, y:52.2});
+  E({id:'roots', type:'roots', x:16, y:48.9});
+
+  E({id:'teia', type:'npc', who:'teia', x:17.4, y:58.6, home:{x:17.4,y:58.6}});
+  E({id:'lio', type:'npc', who:'lio', x:20.6, y:57.3, route:[{x:20.6,y:57.3},{x:22,y:58.5},{x:18.5,y:56.5}]});
+  E({id:'maru', type:'npc', who:'maru', x:12.5, y:61.5, route:[{x:12.5,y:61.5},{x:16.5,y:62.2},{x:9.5,y:60.8}]});
+
+  E({id:'r_houseNight', type:'res', res:'houseNight', x:14.6, y:57.9});
+  E({id:'r_gateSteps', type:'res', res:'gateSteps', x:21.6, y:53.0});
+
+  // Prados
+  E({id:'arch', type:'arch', x:31.9, y:34.6});
+  E({id:'r_archOld', type:'res', res:'archOld', x:31.9, y:35.4});
+  E({id:'r_fragments', type:'res', res:'fragments', x:35.2, y:33.4, pile:true});
+  E({id:'r_lakeEcho', type:'res', res:'lakeEcho', x:36.4, y:27.6});
+  E({id:'tent', type:'tent', x:39.3, y:35.6}); block[idx(39,35)]=1;
+  E({id:'campfire', type:'deadfire', x:40.8, y:37.6});
+  E({id:'notebook', type:'item', item:'notebook', x:41.6, y:36.3});
+  E({id:'r_campScarf', type:'res', res:'campScarf', x:38.6, y:38.4, scarf:true});
+  E({id:'r_campSteps', type:'res', res:'campSteps', x:42.6, y:35.4});
+  E({id:'cap_camp', type:'capsule', x:44.2, y:38.3, r:.85, state:'Dañada'});
+  E({id:'r_campCapsule', type:'res', res:'campCapsule', x:44.2, y:39.4});
+
+  E({id:'boro', type:'npc', who:'boro', x:51, y:22.6, route:[{x:51,y:22.6},{x:47.5,y:24},{x:53.5,y:24.8},{x:49,y:21.8}], night:{x:52.3,y:21.2}});
+  E({id:'boroFire', type:'fire', x:51.2, y:20.6});
+  E({id:'cap_boro', type:'capsule', x:48.4, y:18.4, r:.8, state:'Sellada'});
+  E({id:'r_boroCapsule', type:'res', res:'boroCapsule', x:48.4, y:19.5});
+  E({id:'button', type:'item', item:'button', x:26.4, y:27.6});
+  E({id:'key', type:'item', item:'key', x:31.9, y:33.6});
+  E({id:'bell', type:'item', item:'bell', x:44.8, y:21.5});
+
+  E({id:'pim', type:'npc', who:'pim', x:58.2, y:38.6, look:'up'});
+  E({id:'tolo', type:'npc', who:'tolo', x:59.6, y:38.4, look:'up'});
+
+  E({id:'fl1', type:'flower', x:30.8, y:20.6});
+  E({id:'fl2', type:'flower', x:42.5, y:24.6});
+  E({id:'fl3', type:'flower', x:35.4, y:26.4});
+
+  E({id:'musgo', type:'musgo', x:MUSGO_HOME.x, y:MUSGO_HOME.y});
+  E({id:'sign', type:'sign', x:67.6, y:28.6});
+
+  // Ciudad
+  E({id:'cap_archive', type:'capsule', x:84.5, y:23.4, r:2.0, state:'Anómala', big:true});
+  E({id:'r_archive', type:'res', res:'archive', x:84.5, y:26.0});
+  E({id:'oru', type:'npc', who:'oru', x:82.4, y:27.4, home:{x:82.4,y:27.4}});
+  E({id:'cap_s1', type:'capsule', x:78.6, y:18.2, r:1.1, state:'Estable'});
+  E({id:'r_cityStable', type:'res', res:'cityStable', x:78.6, y:19.7});
+  E({id:'cap_s2', type:'capsule', x:90.4, y:20.4, r:1.1, state:'Inactiva'});
+  E({id:'cap_s3', type:'capsule', x:78.2, y:35.2, r:1.1, state:'Dañada'});
+  E({id:'cap_s4', type:'capsule', x:90.6, y:32.2, r:1.1, state:'Sellada'});
+  E({id:'cap_s5', type:'capsule', x:87.6, y:38.6, r:.9, state:'Estable'});
+  E({id:'cityGate', type:'citygate', x:86, y:10.4});
+  for (let x=84;x<=87;x++) for (let y=9;y<=10;y++) block[idx(x,y)]=1;
+  E({id:'guard', type:'npc', who:'guard', x:86, y:12.3, home:{x:86,y:12.3}});
+  const lamps=[[76,26],[80,23],[88,26],[83,31],[80,14],[90,15],[76,33],[88,35],[84,17]];
+  lamps.forEach((l,i)=>E({id:'lamp'+i, type:'lamp', x:l[0], y:l[1]}));
+
+  for (const e of ents){
+    if (e.type==='capsule'){
+      const r=e.r-.25;
+      for (let y=Math.floor(e.y-r);y<=e.y+r;y++) for (let x=Math.floor(e.x-r);x<=e.x+r;x++)
+        if (dist(x+.5,y+.5,e.x,e.y-.1)<=r+.2) block[idx(x,y)]=1;
+    }
+    if (e.type==='lamp') block[idx(Math.floor(e.x),Math.floor(e.y))]=1;
+  }
+
+  // vidrieros
+  const vd=[[28,24],[44,29],[55,26],[33,43],[60,35],[25,33]];
+  vd.forEach((p,i)=>E({id:'vid'+i, type:'vid', x:p[0], y:p[1], hx:p[0], hy:p[1], st:'wander', gx:p[0], gy:p[1], wait:Math.random()*3, face:1, curious:0}));
+}
+
+function placeTrees(){
+  const keep=[];
+  for (const e of ents) if (e.type!=='lamp') keep.push([e.x,e.y,e.type==='capsule'?e.r+1.5:2.2]);
+  for (const h of huts) keep.push([h.tx+1,h.ty+1,2.5]);
+  keep.push([MUSGO_HOME.x,MUSGO_HOME.y,4],[ROOT_P.x,ROOT_P.y-1,2.5],[GATE_P.x+1,GATE_P.y-1,2.5]);
+  for (let y=1;y<H-1;y++) for (let x=1;x<W-1;x++){
+    const t=tileAt(x,y);
+    if (t!==GRASS && t!==FLOW && t!==DIRT && t!==STONE) continue;
+    if (tileAt(x,y+1)===VOID || tileAt(x,y-1)===VOID || tileAt(x-1,y)===VOID || tileAt(x+1,y)===VOID) continue;
+    let nearPath=false;
+    for (let j=-1;j<=1&&!nearPath;j++) for (let i=-1;i<=1;i++){ const q=tileAt(x+i,y+j); if (q===PATH||q===BRIDGE||q===GATE||q===ROOTS){nearPath=true;break;} }
+    if (nearPath) continue;
+    const cx=x+.5, cy=y+.5;
+    if (keep.some(k=>dist(cx,cy,k[0],k[1])<k[2])) continue;
+    let p, kind;
+    const forest = cy<11 && cx<69;
+    if (inTribe(cx,cy,1)){ p=.03; kind='pine'; }
+    else if (cx>=74){ p=.025; kind='bloom'; }
+    else if (forest){ p=.42+(11-cy)*.04; kind='rev'; }
+    else if (cx>=38 && cy>=50){ p=.02; kind='dry'; }
+    else { p=.03+Math.max(0,fbm(x*.15,y*.15,21)-.52)*.9; kind = hash(x,y,41)<.3?'pine':'oak'; }
+    if (hash(x,y,31)<p){
+      trees.push({x:cx+(hash(x,y,51)-.5)*.3, y:cy+.3, kind, s:.85+hash(x,y,61)*.35, seed:hash(x,y,71)});
+      block[idx(x,y)]=1;
+    }
+  }
+}
+
+/* ================================================================
+   ESTADO, GUARDADO
+   ================================================================ */
+const SAVE_KEY='kolotopir-save-v1', SET_KEY='kolotopir-settings-v1';
+let S = null;
+function newState(){
+  return { v:1, p:{x:13.5, y:58.4, face:'down'}, time:.62, played:0, flags:{}, inv:[], heard:[], chars:[], beasts:[],
+    hints:0, tried:[], explored:new Uint8Array(W*H), crouch:false, listening:false, done:false };
+}
+function serialize(){
+  let ex=''; for (let i=0;i<S.explored.length;i++) ex+=S.explored[i]?'1':'0';
+  const o=Object.assign({},S,{explored:ex, listening:false});
+  o.npcs={}; for (const e of ents) if (e.type==='npc'||e.type==='musgo') o.npcs[e.id]={x:e.x,y:e.y};
+  return JSON.stringify(o);
+}
+function deserialize(str){
+  const o=JSON.parse(str); const st=newState();
+  Object.assign(st,o);
+  st.explored=new Uint8Array(W*H);
+  if (typeof o.explored==='string') for (let i=0;i<o.explored.length&&i<W*H;i++) st.explored[i]=o.explored[i]==='1'?1:0;
+  if (o.npcs) for (const e of ents) if (o.npcs[e.id]){ e.x=o.npcs[e.id].x; e.y=o.npcs[e.id].y; }
+  return st;
+}
+function save(){ if (!S) return; try{ localStorage.setItem(SAVE_KEY, serialize()); }catch(e){} }
+function loadSave(){ try{ const s=localStorage.getItem(SAVE_KEY); return s?deserialize(s):null; }catch(e){ return null; } }
+
+const SET = { text:1, reduce: matchMedia('(prefers-reduced-motion: reduce)').matches, sound:true, cues:true, contrast:false };
+try{ Object.assign(SET, JSON.parse(localStorage.getItem(SET_KEY)||'{}')); }catch(e){}
+function saveSettings(){ try{ localStorage.setItem(SET_KEY, JSON.stringify(SET)); }catch(e){} applySettings(); }
+function applySettings(){
+  document.documentElement.style.setProperty('--fs', [15,17,20][SET.text]+'px');
+  document.body.classList.toggle('hc', SET.contrast);
+  Snd.setOn(SET.sound);
+}
+
+const F = k => !!S.flags[k];
+const setF = (k,v=true) => { S.flags[k]=v; };
+const has = it => S.inv.includes(it);
+function give(it){ if (!has(it)){ S.inv.push(it); toast('<b>Objeto:</b> '+ITEMS[it].name); Snd.chime(660); } }
+function take(it){ S.inv = S.inv.filter(x=>x!==it); }
+function meet(c){ if (!S.chars.includes(c)){ S.chars.push(c); toast('<b>Cuaderno · Personajes:</b> '+CHARS[c].name); } }
+function learnBeast(b){ if (!S.beasts.includes(b)){ S.beasts.push(b); toast('<b>Cuaderno · Bestiario:</b> '+BEASTS[b].name); } }
+const evidenceCount = () => MYSTERY.evidence.filter(e=>S.heard.includes(e.id)||F(e.id)).length;
+
+/* ================================================================
+   AUDIO (procedural, se activa tras interacción)
+   ================================================================ */
+const Snd = (() => {
+  let ac=null, master=null, droneG=null, resG=null, oscs=[], on=true, region='';
+  function init(){
+    if (ac) return;
+    try{
+      ac = new (window.AudioContext||window.webkitAudioContext)();
+      master = ac.createGain(); master.gain.value = on?.5:0; master.connect(ac.destination);
+      const lp = ac.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=700; lp.connect(master);
+      droneG = ac.createGain(); droneG.gain.value=.05; droneG.connect(lp);
+      [110,165,220.5].forEach((f,i)=>{ const o=ac.createOscillator(); o.type=i===2?'triangle':'sine'; o.frequency.value=f; const g=ac.createGain(); g.gain.value=i===2?.18:.5; o.connect(g); g.connect(droneG); o.start(); oscs.push(o); });
+      const lfo=ac.createOscillator(); lfo.frequency.value=.07; const lg=ac.createGain(); lg.gain.value=.03; lfo.connect(lg); lg.connect(droneG.gain); lfo.start();
+      resG = ac.createGain(); resG.gain.value=0; resG.connect(master);
+      [880,1318.5].forEach(f=>{ const o=ac.createOscillator(); o.type='sine'; o.frequency.value=f; const g=ac.createGain(); g.gain.value=.05; const tr=ac.createOscillator(); tr.frequency.value=5.5; const tg=ac.createGain(); tg.gain.value=.04; tr.connect(tg); tg.connect(g.gain); tr.start(); o.connect(g); g.connect(resG); o.start(); });
+    }catch(e){ ac=null; }
+  }
+  function setRegion(r){
+    if (!ac || r===region) return; region=r;
+    const base = {tribe:98, prados:110, ciudad:130.8, gargantas:87.3, bosque:103.8}[r]||110;
+    const t=ac.currentTime;
+    oscs.forEach((o,i)=>o.frequency.setTargetAtTime(base*[1,1.5,2.003][i], t, 1.5));
+  }
+  function listen(v){ if (ac) resG.gain.setTargetAtTime(v?.6:0, ac.currentTime, .3); }
+  function chime(f=880, d=.9){
+    if (!ac||!on) return; const t=ac.currentTime;
+    [1,1.5].forEach((m,i)=>{ const o=ac.createOscillator(); o.type='sine'; o.frequency.value=f*m; const g=ac.createGain(); g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(.12/(i+1),t+.02); g.gain.exponentialRampToValueAtTime(.0001,t+d); o.connect(g); g.connect(master); o.start(t+i*.05); o.stop(t+d+.1); });
+  }
+  function thud(){
+    if (!ac||!on) return; const t=ac.currentTime; const o=ac.createOscillator(); o.type='sawtooth'; o.frequency.setValueAtTime(90,t); o.frequency.exponentialRampToValueAtTime(40,t+.5);
+    const f=ac.createBiquadFilter(); f.type='lowpass'; f.frequency.value=300; const g=ac.createGain(); g.gain.setValueAtTime(.35,t); g.gain.exponentialRampToValueAtTime(.001,t+.6);
+    o.connect(f); f.connect(g); g.connect(master); o.start(t); o.stop(t+.7);
+  }
+  function setOn(v){ on=v; if (master) master.gain.setTargetAtTime(v?.5:0, ac.currentTime, .1); }
+  return {init, setRegion, listen, chime, thud, setOn};
+})();
+
+/* ================================================================
+   LIENZO Y PRE-RENDER DEL SUELO
+   ================================================================ */
+const cv = document.getElementById('game');
+const ctx = cv.getContext('2d');
+const light = document.createElement('canvas');
+const lctx = light.getContext('2d');
+let dpr=1, VW=0, VH=0, TS=48;
+function resize(){
+  dpr = Math.min(window.devicePixelRatio||1, 2);
+  VW = window.innerWidth; VH = window.innerHeight;
+  cv.width = Math.round(VW*dpr); cv.height = Math.round(VH*dpr);
+  light.width = cv.width; light.height = cv.height;
+  TS = Math.round(clamp(Math.min(VW/19, VH/12), 30, 70));
+}
+window.addEventListener('resize', resize);
+
+const ground = document.createElement('canvas');
+function grassCol(x,y,v){
+  const forest = clamp((12-y)/6,0,1)*(x<69?1:0);
+  const tribe = inTribe(x,y,2)?1:0;
+  const h = lerp(lerp(96,82,tribe), 168, forest*.7);
+  const s = lerp(34, 26, forest);
+  const l = 36 + v*7 - forest*6;
+  return `hsl(${h},${s}%,${l}%)`;
+}
+function paintGround(){
+  ground.width = W*T; ground.height = (H+1)*T;
+  const g = ground.getContext('2d');
+  for (let y=0;y<H;y++) for (let x=0;x<W;x++){
+    const t = tiles[idx(x,y)], px=x*T, py=y*T, v=fbm(x*.18,y*.18,90)*.6+hash(x,y,90)*.15;
+    const r = (a)=>hash(x,y,a);
+    switch(t){
+      case VOID: {
+        const up=tileAt(x,y-1);
+        if (up!==VOID){
+          const gr=g.createLinearGradient(0,py,0,py+T*1.1);
+          gr.addColorStop(0,'#5b4232'); gr.addColorStop(.55,'#3d2c25'); gr.addColorStop(1,'rgba(40,30,30,0)');
+          g.fillStyle=gr; g.beginPath(); g.moveTo(px,py); g.lineTo(px+T,py); g.lineTo(px+T-6-r(2)*8,py+T*(.6+r(3)*.5)); g.lineTo(px+4+r(4)*8,py+T*(.7+r(5)*.4)); g.closePath(); g.fill();
+          if (r(6)<.4){ g.fillStyle='rgba(120,160,90,.6)'; g.fillRect(px+r(7)*T,py,2,6+r(8)*10); }
+        }
+        break;
+      }
+      case GRASS: case FLOW: {
+        g.fillStyle=grassCol(x,y,v); g.fillRect(px,py,T,T);
+        g.strokeStyle='rgba(20,40,15,.25)'; g.lineWidth=1.2;
+        for (let i=0;i<5;i++){ const bx=px+r(10+i)*T, by=py+r(20+i)*T; g.beginPath(); g.moveTo(bx,by); g.lineTo(bx+(r(30+i)-.5)*4,by-4-r(40+i)*3); g.stroke(); }
+        g.strokeStyle='rgba(230,240,190,.12)';
+        for (let i=0;i<3;i++){ const bx=px+r(50+i)*T, by=py+r(60+i)*T; g.beginPath(); g.moveTo(bx,by); g.lineTo(bx+1,by-4); g.stroke(); }
+        if (t===FLOW){
+          const cols = y<12&&x<69 ? ['#b9a3f0','#8fd3e8','#e4d8ff'] : ['#d9c2f0','#f2d16b','#f4efe3','#e98fa5'];
+          for (let i=0;i<6;i++){ g.fillStyle=cols[Math.floor(r(70+i)*cols.length)]; g.beginPath(); g.arc(px+3+r(80+i)*(T-6),py+3+r(90+i)*(T-6),1.6,0,7); g.fill(); }
+        }
+        break;
+      }
+      case DIRT: g.fillStyle=`hsl(30,28%,${38+v*6}%)`; g.fillRect(px,py,T,T);
+        for (let i=0;i<4;i++){ g.fillStyle='rgba(40,25,15,.25)'; g.fillRect(px+r(i+3)*T,py+r(i+9)*T,2,2); }
+        break;
+      case PATH: {
+        const inT=inTribe(x+.5,y+.5,1.5), city=x>=73;
+        g.fillStyle= city?`hsl(38,30%,${62+v*5}%)`: inT?`hsl(32,32%,${46+v*5}%)`:`hsl(38,34%,${52+v*6}%)`; g.fillRect(px,py,T,T);
+        for (let i=0;i<5;i++){ g.fillStyle=`rgba(255,240,210,${.12+r(i+40)*.15})`; g.beginPath(); g.ellipse(px+r(i+11)*T,py+r(i+17)*T,2+r(i)*2,1.5,0,0,7); g.fill(); }
+        break;
+      }
+      case SAND: g.fillStyle=`hsl(40,40%,${66+v*5}%)`; g.fillRect(px,py,T,T);
+        for (let i=0;i<4;i++){ g.fillStyle='rgba(120,90,50,.15)'; g.fillRect(px+r(i+3)*T,py+r(i+7)*T,2,1); }
+        break;
+      case WATER: {
+        g.fillStyle = x>=60 ? `hsl(197,48%,${34+v*4}%)` : `hsl(195,45%,${36+v*4}%)`; g.fillRect(px,py,T,T);
+        g.strokeStyle='rgba(235,245,240,.45)'; g.lineWidth=2;
+        if (tileAt(x,y-1)!==WATER&&tileAt(x,y-1)!==BRIDGE){ g.beginPath(); g.moveTo(px,py+1.5); g.lineTo(px+T,py+1.5); g.stroke(); }
+        if (tileAt(x-1,y)!==WATER&&tileAt(x-1,y)!==BRIDGE){ g.beginPath(); g.moveTo(px+1,py); g.lineTo(px+1,py+T); g.stroke(); }
+        if (tileAt(x+1,y)!==WATER&&tileAt(x+1,y)!==BRIDGE){ g.beginPath(); g.moveTo(px+T-1,py); g.lineTo(px+T-1,py+T); g.stroke(); }
+        if (tileAt(x,y+1)!==WATER&&tileAt(x,y+1)!==BRIDGE){ g.fillStyle='rgba(20,40,50,.35)'; g.fillRect(px,py+T-4,T,4); }
+        break;
+      }
+      case BRIDGE: {
+        g.fillStyle='hsl(197,48%,34%)'; g.fillRect(px,py,T,T);
+        for (let i=0;i<4;i++){ g.fillStyle = i%2?'#8a6440':'#9b7349'; g.fillRect(px+i*8,py+2,7,T-4); }
+        g.fillStyle='rgba(0,0,0,.25)'; for (let i=0;i<4;i++) g.fillRect(px+i*8+6,py+2,1,T-4);
+        if (y===29){ g.fillStyle='#5e4128'; g.fillRect(px,py,T,4); }
+        if (y===31){ g.fillStyle='#5e4128'; g.fillRect(px,py+T-4,T,4); }
+        break;
+      }
+      case STONE: {
+        g.fillStyle=`hsl(36,24%,${68+v*5}%)`; g.fillRect(px,py,T,T);
+        g.strokeStyle='rgba(90,70,50,.3)'; g.lineWidth=1;
+        g.strokeRect(px+.5,py+.5,T/2,T/2); g.strokeRect(px+T/2+.5,py+T/2+.5,T/2-1,T/2-1);
+        if (((x+y)&3)===0){ g.fillStyle='rgba(149,220,234,.12)'; g.fillRect(px+T/2,py,T/2,T/2); }
+        break;
+      }
+      case ROCK: case ROOTS: case GATE: {
+        g.fillStyle=`hsl(270,8%,${34+v*6}%)`; g.fillRect(px,py,T,T);
+        g.fillStyle='rgba(255,255,255,.07)'; g.fillRect(px+2,py+2,T-6,5);
+        const below=tileAt(x,y+1);
+        if (below!==ROCK&&below!==ROOTS&&below!==GATE){ g.fillStyle='hsl(270,10%,24%)'; g.fillRect(px,py+T*.55,T,T*.45); g.fillStyle='rgba(0,0,0,.2)'; g.fillRect(px,py+T-3,T,3); }
+        for (let i=0;i<3;i++){ g.strokeStyle='rgba(0,0,0,.25)'; g.beginPath(); g.moveTo(px+r(i)*T,py+r(i+5)*T); g.lineTo(px+r(i+9)*T,py+r(i+13)*T); g.stroke(); }
+        if (t===ROOTS){
+          g.fillStyle='hsl(270,10%,18%)'; g.fillRect(px,py,T,T);
+          g.strokeStyle='#6b4a2e'; g.lineWidth=2.4;
+          for (let i=0;i<6;i++){ const rx=px+3+i*5+r(i)*3; g.beginPath(); g.moveTo(rx,py); g.bezierCurveTo(rx+4,py+10,rx-4,py+20,rx+r(i+3)*3,py+T); g.stroke(); }
+          g.fillStyle='#5d7d3a'; for (let i=0;i<5;i++){ g.beginPath(); g.ellipse(px+r(i+20)*T,py+r(i+30)*T,3,1.6,r(i)*3,0,7); g.fill(); }
+        }
+        if (t===GATE){
+          g.fillStyle=`hsl(${inTribe(x+.5,y+.5,.5)?30:30},20%,${38+v*4}%)`; g.fillRect(px,py,T,T);
+          for (let i=0;i<4;i++){ g.fillStyle=i%2?'#6f4e30':'#7d5835'; g.fillRect(px+i*8,py,7,T); g.beginPath(); g.moveTo(px+i*8,py+2); g.lineTo(px+i*8+3.5,py-4); g.lineTo(px+i*8+7,py+2); g.fill(); }
+          g.fillStyle='#4b331f'; g.fillRect(px,py+T*.35,T,4); g.fillRect(px,py+T*.7,T,4);
+        }
+        break;
+      }
+      case RED: {
+        g.fillStyle=`hsl(${14+v*8},46%,${38+v*6}%)`; g.fillRect(px,py,T,T);
+        for (let i=0;i<4;i++){ g.fillStyle=`rgba(255,200,160,${.08+r(i)*.08})`; g.fillRect(px,py+4+i*7+r(i+4)*3,T,2); }
+        const below=tileAt(x,y+1);
+        if (below!==RED){ g.fillStyle='hsl(12,40%,26%)'; g.fillRect(px,py+T*.6,T,T*.4); }
+        break;
+      }
+    }
+  }
+  // bordes suaves: la hierba invade un poco los caminos y la tierra
+  for (let y=0;y<H;y++) for (let x=0;x<W;x++){
+    const t=tiles[idx(x,y)]; if (t!==GRASS && t!==FLOW) continue;
+    const v=fbm(x*.18,y*.18,90)*.6+hash(x,y,90)*.15;
+    g.fillStyle=grassCol(x,y,v);
+    for (const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
+      const n=tileAt(x+dx,y+dy); if (n!==PATH && n!==DIRT && n!==SAND) continue;
+      for (let i=0;i<4;i++){
+        const a=hash(x*4+i,y*4+dx+2*dy,123);
+        const bx = dx ? (dx>0?(x+1)*T:x*T) : x*T+a*T;
+        const by = dy ? (dy>0?(y+1)*T:y*T) : y*T+a*T;
+        ell(g,bx,by,dx?4+a*4:7+a*5,dy?4+a*4:7+a*5);
+      }
+    }
+  }
+}
+
+/* ================================================================
+   DIBUJO DE PERSONAJES
+   ================================================================ */
+function ell(c,x,y,rx,ry,rot=0){ c.beginPath(); c.ellipse(x,y,rx,ry,rot,0,Math.PI*2); c.fill(); }
+function rr(c,x,y,w,h,r){ c.beginPath(); c.moveTo(x+r,y); c.arcTo(x+w,y,x+w,y+h,r); c.arcTo(x+w,y+h,x,y+h,r); c.arcTo(x,y+h,x,y,r); c.arcTo(x,y,x+w,y,r); c.closePath(); c.fill(); }
+function shade(hex,amt){
+  const n=parseInt(hex.slice(1),16); let r=n>>16,g=(n>>8)&255,b=n&255;
+  r=clamp(Math.round(r+amt),0,255); g=clamp(Math.round(g+amt),0,255); b=clamp(Math.round(b+amt),0,255);
+  return '#'+((1<<24)|(r<<16)|(g<<8)|b).toString(16).slice(1);
+}
+function drawHuman(c,x,y,p,face,t,moving,crouch,shadow=true){
+  const k = crouch ? .78 : 1;
+  const ph = moving ? t*11 : 0;
+  const sw = moving ? Math.sin(ph)*3 : 0;
+  const bob = moving ? Math.abs(Math.sin(ph))*1.4 : 0;
+  c.save(); c.translate(x,y);
+  if (shadow){ c.fillStyle='rgba(0,0,0,.28)'; ell(c,0,0,9,3.4); }
+  c.fillStyle='#4a3a2c';
+  c.fillRect(-5+sw*.4,-10*k,4,10*k); c.fillRect(1-sw*.4,-10*k,4,10*k);
+  c.fillStyle='#3a2a1e'; c.fillRect(-6+sw*.4,-2,5,2.5); c.fillRect(1-sw*.4,-2,5,2.5);
+  c.translate(0,-bob);
+  if (p.bag && face==='up'){ c.fillStyle='#7a5434'; rr(c,-6,-25*k,12,11,3); }
+  c.fillStyle=p.cloth; rr(c,-8,-26*k,16,17*k,4);
+  c.fillStyle=shade(p.cloth,-25); c.fillRect(-8,-12*k,16,3);
+  c.fillStyle='#6b4a2e'; c.fillRect(-8,-15*k,16,2.5);
+  if (p.bag && face!=='up'){ c.save(); c.strokeStyle='#6b4a2e'; c.lineWidth=2; c.beginPath(); c.moveTo(-6,-25*k); c.lineTo(6,-14*k); c.stroke(); c.restore();
+    c.fillStyle='#7a5434'; rr(c, face==='left'?2:-9, -15*k, 7, 7, 2); }
+  c.fillStyle=p.skin;
+  const aw = moving ? Math.sin(ph)*2.5 : 0;
+  c.fillRect(-11,-24*k+aw,3.5,10); c.fillRect(7.5,-24*k-aw,3.5,10);
+  c.fillStyle=p.skin; c.beginPath(); c.arc(0,-31*k,7.6,0,7); c.fill();
+  c.fillStyle=p.hair;
+  if (face==='up'){ c.beginPath(); c.arc(0,-31.5*k,8,0,7); c.fill(); }
+  else {
+    c.beginPath(); c.arc(0,-33*k,8,Math.PI*1.05,Math.PI*1.95+.1); c.fill();
+    if (p.old){ c.beginPath(); c.arc(0,-37*k,4,0,7); c.fill(); }
+    else for (let i=-2;i<=2;i++){ c.beginPath(); c.moveTo(i*3-2,-35*k); c.lineTo(i*3+1,-29.5*k-(i&1)*1.5); c.lineTo(i*3+3,-35*k); c.fill(); }
+    if (face==='left'||face==='right'){ const s=face==='left'?1:-1; c.beginPath(); c.arc(s*3,-33*k,7,0,7); c.fill(); }
+    c.fillStyle='#1b120c';
+    if (face==='down'){ c.fillRect(-3.5,-31*k,1.8,2.4); c.fillRect(1.8,-31*k,1.8,2.4); }
+    else { const s=face==='left'?-1:1; c.fillRect(s*4-1,-31*k,1.8,2.4); }
+  }
+  c.restore();
+}
+function drawKolo(c,x,y,p,face,t,moving,shadow=true){
+  const s = p.small ? .82 : 1;
+  const ph = moving ? t*8 : 0;
+  const sw = moving ? Math.sin(ph)*3 : 0;
+  const bob = moving ? Math.abs(Math.sin(ph))*1.5 : Math.sin(t*1.6)*.6;
+  c.save(); c.translate(x,y); c.scale(s,s);
+  if (shadow){ c.fillStyle='rgba(0,0,0,.3)'; ell(c,0,0,14,4.5); }
+  const fd = shade(p.fur,-18);
+  c.fillStyle=fd; rr(c,-10+sw*.4,-12,8,12,3); rr(c,2-sw*.4,-12,8,12,3);
+  c.fillStyle='#2a2120'; rr(c,-11+sw*.4,-3,9,4,2); rr(c,2-sw*.4,-3,9,4,2);
+  c.translate(0,-bob);
+  if (p.bag){ c.fillStyle='#6d4a2c'; rr(c, face==='up'?-10:(face==='left'?4:-14), -40, face==='up'?20:10, 22, 5); }
+  c.fillStyle=p.fur; ell(c,0,-24,14,15);
+  c.fillStyle=p.robe; rr(c,-13,-34,26,26,8);
+  c.fillStyle=shade(p.robe,-30); c.fillRect(-13,-14,26,3);
+  c.fillStyle=shade(p.robe,-20); for (let i=0;i<4;i++) c.fillRect(-11+i*6,-20,3,3);
+  c.fillStyle=p.scarf; rr(c,-14,-36,28,7,3);
+  if (face!=='up'){ c.fillRect(face==='left'?4:-8,-31,5,12); }
+  const aw = moving ? Math.sin(ph)*2.5 : 0;
+  c.fillStyle=p.fur; rr(c,-18,-31+aw,6,15,3); rr(c,12,-31-aw,6,15,3);
+  if (p.staff){ c.strokeStyle='#6b4a2e'; c.lineWidth=2.5; c.beginPath(); c.moveTo(18,-2); c.lineTo(19,-58); c.stroke();
+    c.strokeStyle='#a07a4a'; c.lineWidth=1.5; c.beginPath(); c.arc(19,-62,6,0,7); c.stroke();
+    c.fillStyle='#fff1c4'; ell(c,19,-62,3,3); }
+  // cabeza
+  c.fillStyle=p.fur;
+  const hx=0, hy=-44;
+  c.fillStyle=p.fur; ell(c,hx-9,hy-8,4.5,6,-.4); ell(c,hx+9,hy-8,4.5,6,.4);
+  c.fillStyle='#d9938a'; ell(c,hx-9,hy-7.5,2.2,3.6,-.4); ell(c,hx+9,hy-7.5,2.2,3.6,.4);
+  c.fillStyle=p.fur; ell(c,hx,hy,11,10);
+  c.fillStyle=shade(p.fur,12);
+  if (face==='down'){ rr(c,hx-4.5,hy-1,9,14,4.5); c.fillStyle=shade(p.fur,-30); ell(c,hx-1.5,hy+12,1,1); ell(c,hx+1.5,hy+12,1,1); }
+  else if (face==='left'||face==='right'){
+    const d=face==='left'?-1:1;
+    c.save(); c.translate(hx+d*7,hy+1); c.rotate(d*.35); rr(c, d>0?0:-12, -3.5, 12, 7.5, 3.5); c.restore();
+  }
+  if (face!=='up'){
+    c.fillStyle='#16100e';
+    if (face==='down'){ ell(c,hx-4.5,hy-2.5,1.6,1.9); ell(c,hx+4.5,hy-2.5,1.6,1.9); c.fillStyle='rgba(255,255,255,.8)'; ell(c,hx-4,hy-3.2,.6,.6); ell(c,hx+5,hy-3.2,.6,.6); }
+    else { const d=face==='left'?-1:1; ell(c,hx+d*2,hy-3,1.6,1.9); c.fillStyle='rgba(255,255,255,.8)'; ell(c,hx+d*2.5,hy-3.6,.6,.6); }
+  }
+  c.restore();
+}
+function drawMiga(c,x,y,t){
+  c.save(); c.translate(x,y);
+  const f = Math.sin(t*18)*.7;
+  c.fillStyle='#14121a';
+  c.save(); c.scale(1,Math.abs(f)+.25);
+  c.beginPath(); c.moveTo(0,0); c.lineTo(-11,-7); c.lineTo(-8,4); c.closePath(); c.fill();
+  c.beginPath(); c.moveTo(0,0); c.lineTo(11,-7); c.lineTo(8,4); c.closePath(); c.fill();
+  c.restore();
+  c.strokeStyle='rgba(240,230,210,.5)'; c.lineWidth=.7; c.beginPath(); c.moveTo(-8,-3); c.lineTo(-3,0); c.moveTo(8,-3); c.lineTo(3,0); c.stroke();
+  c.fillStyle='#211d28'; ell(c,0,0,2,4.5);
+  c.fillStyle='#f4ecd8'; ell(c,-1,-2.5,.7,.7); ell(c,1,-2.5,.7,.7);
+  c.restore();
+}
+function drawVoice(c,x,y,t){
+  c.save(); c.translate(x,y);
+  for (let i=3;i>=1;i--){ c.fillStyle=`rgba(149,220,234,${.12*i})`; ell(c,0,0,6+i*7+Math.sin(t*2+i)*2,6+i*7+Math.sin(t*2+i)*2); }
+  c.fillStyle='#e8fbff'; ell(c,0,0,5,5);
+  c.restore();
+}
+
+/* ================================================================
+   DIBUJO DE OBJETOS DEL MUNDO
+   ================================================================ */
+const TREE_COL = {
+  oak:['#3f6b33','#55853f','#77a356'], pine:['#2f5536','#3d6b44','#5a8a5c'],
+  rev:['#3e3a72','#5a4f98','#8a76c8'], bloom:['#a5627e','#c97f9a','#efb3c4'], dry:['#6f6a3a','#8d8547','#b0a65c']
+};
+function drawTree(c,tr,alpha){
+  const x=tr.x*T, y=tr.y*T, s=tr.s, col=TREE_COL[tr.kind];
+  c.save(); c.globalAlpha=alpha;
+  c.fillStyle='rgba(0,0,0,.25)'; ell(c,x,y,13*s,5*s);
+  c.fillStyle= tr.kind==='rev' ? '#2c2440' : '#5a3d26'; c.fillRect(x-3.5*s,y-18*s,7*s,18*s);
+  const sway = SET.reduce?0:Math.sin(now*1.2+tr.seed*9)*1.2;
+  if (tr.kind==='pine'){
+    for (let i=0;i<3;i++){ c.fillStyle=col[i]; c.beginPath(); c.moveTo(x-(18-i*4)*s+sway*.3,y-(14+i*13)*s); c.lineTo(x+sway,y-(40+i*12)*s); c.lineTo(x+(18-i*4)*s+sway*.3,y-(14+i*13)*s); c.closePath(); c.fill(); }
+  } else {
+    c.fillStyle=col[0]; ell(c,x+sway*.5,y-30*s,20*s,17*s);
+    c.fillStyle=col[1]; ell(c,x-6*s+sway*.7,y-35*s,13*s,11*s); ell(c,x+8*s+sway*.7,y-33*s,12*s,10*s);
+    c.fillStyle=col[2]; ell(c,x-4*s+sway,y-40*s,7*s,5*s);
+    if (tr.kind==='rev'){ c.fillStyle='rgba(180,240,255,.8)'; for (let i=0;i<3;i++) ell(c,x+(hash(i,tr.seed*1e4|0,3)-.5)*30*s,y-(24+hash(i,tr.seed*1e4|0,5)*20)*s,1.6,1.6); }
+    if (tr.kind==='bloom'){ c.fillStyle='#fff0f4'; for (let i=0;i<5;i++) ell(c,x+(hash(i,tr.seed*1e4|0,6)-.5)*30*s,y-(22+hash(i,tr.seed*1e4|0,8)*22)*s,1.5,1.5); }
+  }
+  c.restore();
+}
+function drawHut(c,h){
+  const x=h.tx*T, y=h.ty*T, w=2*T;
+  c.fillStyle='rgba(0,0,0,.25)'; ell(c,x+w/2,y+2*T-2,w*.55,8);
+  c.fillStyle='#b99a72'; rr(c,x+4,y+T*.55,w-8,T*1.45-4,6);
+  c.fillStyle='#9a7c58'; for (let i=0;i<5;i++) c.fillRect(x+8+i*11,y+T*.6,2,T*1.3);
+  c.fillStyle='#3b281b'; rr(c,x+w/2-8,y+2*T-26,16,22,6);
+  c.fillStyle=h.roof; c.beginPath(); c.moveTo(x-6,y+T*.75); c.lineTo(x+w/2,y-T*.55); c.lineTo(x+w+6,y+T*.75); c.closePath(); c.fill();
+  c.strokeStyle=shade(h.roof,-30); c.lineWidth=1.4;
+  for (let i=1;i<6;i++){ c.beginPath(); c.moveTo(x+w/2,y-T*.55); c.lineTo(x-6+i*(w+12)/6,y+T*.75); c.stroke(); }
+  c.fillStyle=shade(h.roof,-40); c.fillRect(x-6,y+T*.72,w+12,3);
+  if (h.id==='home'){ c.fillStyle='#e8ab58'; ell(c,x+w/2,y+T*.4,3,3); }
+}
+const STATE_COL = {Estable:'#95dcea', Inactiva:'#8a8494', 'Dañada':'#e8a058', Sellada:'#b28ae6', 'Anómala':null};
+function drawCapsule(c,e){
+  const x=e.x*T, y=e.y*T, r=e.r*T;
+  c.fillStyle='rgba(0,0,0,.3)'; ell(c,x,y+r*.1,r*1.05,r*.35);
+  const g=c.createLinearGradient(x,y-r*1.6,x,y);
+  g.addColorStop(0,'#efe3cf'); g.addColorStop(1,'#a8987e');
+  c.fillStyle=g; c.beginPath(); c.ellipse(x,y-r*.35,r,r*1.15,0,Math.PI,0); c.lineTo(x+r,y); c.lineTo(x-r,y); c.closePath(); c.fill();
+  let col = STATE_COL[e.state];
+  if (!col){ const hh=(now*60)%360; col=`hsl(${hh},70%,72%)`; }
+  let a = .85;
+  if (e.state==='Dañada') a = hash(Math.floor(now*9),e.x|0,3)<.35 ? .2 : .85;
+  if (e.state==='Inactiva') a = .4;
+  c.save(); c.globalAlpha=a; c.fillStyle=col; c.fillRect(x-r,y-r*.45,r*2,Math.max(3,r*.16)); c.restore();
+  c.fillStyle=col; c.globalAlpha=a*.9; ell(c,x,y-r*.9,r*.22,r*.22); c.globalAlpha=1;
+  c.strokeStyle='rgba(80,60,40,.35)'; c.lineWidth=1.5;
+  c.beginPath(); c.ellipse(x,y-r*.35,r*.62,r*1.0,0,Math.PI*1.1,Math.PI*1.9); c.stroke();
+  if (e.state==='Dañada'){ c.strokeStyle='#3a2a20'; c.lineWidth=1.6; c.beginPath(); c.moveTo(x-r*.2,y-r*1.4); c.lineTo(x,y-r*.9); c.lineTo(x-r*.3,y-r*.6); c.lineTo(x-r*.1,y-r*.2); c.stroke(); }
+  if (e.state==='Sellada'){ c.strokeStyle='#7e5cb8'; c.lineWidth=2.5; for (let i=-1;i<=1;i++){ c.beginPath(); c.moveTo(x+i*r*.5-r*.2,y-r*1.3); c.lineTo(x+i*r*.5+r*.2,y); c.stroke(); } }
+  if (e.big){ c.fillStyle='#b8a888'; c.fillRect(x-r*.25,y-r*.25,r*.5,r*.25); c.fillStyle='#2a2030'; rr(c,x-r*.16,y-r*.42,r*.32,r*.42,6); }
+}
+function drawMusgo(c,e,t){
+  const x=e.x*T, y=e.y*T, asleep=musgoAsleep();
+  const breath = Math.sin(t*(asleep?1.2:2.4))*2;
+  const w = (asleep?30:38), hgt=(asleep?22:30)+breath;
+  c.fillStyle='rgba(0,0,0,.3)'; ell(c,x,y+2,w*1.05,9);
+  c.fillStyle='#3f5a2c'; ell(c,x,y-hgt*.55,w,hgt);
+  c.fillStyle='#55753a'; ell(c,x-8,y-hgt*.8,w*.6,hgt*.55); ell(c,x+12,y-hgt*.65,w*.45,hgt*.5);
+  c.fillStyle='#6f9446'; for (let i=0;i<7;i++) ell(c,x+(hash(i,1,7)-.5)*w*1.4,y-hgt*.4-hash(i,2,7)*hgt*.9,3,2);
+  c.fillStyle='#e9d48a'; for (let i=0;i<4;i++) ell(c,x+(hash(i,3,7)-.5)*w*1.2,y-hgt*.6-hash(i,4,7)*hgt*.6,1.8,1.8);
+  if (!e.calm || true){
+    if (asleep){ c.strokeStyle='#1b2412'; c.lineWidth=2; c.beginPath(); c.moveTo(x-12,y-hgt*.55); c.lineTo(x-6,y-hgt*.55); c.moveTo(x+6,y-hgt*.55); c.lineTo(x+12,y-hgt*.55); c.stroke();
+      c.fillStyle='rgba(241,229,203,.8)'; c.font='bold 10px sans-serif'; const z=(t*.8)%1; c.globalAlpha=1-z; c.fillText('z',x+w*.6+z*8,y-hgt-z*16); c.globalAlpha=1; }
+    else { c.fillStyle='#f6eed2'; ell(c,x-9,y-hgt*.6,4,4.5); ell(c,x+9,y-hgt*.6,4,4.5); c.fillStyle='#1b1410'; const look=clamp((S.p.x-e.x),-1,1)*1.5; ell(c,x-9+look,y-hgt*.58,2,2.4); ell(c,x+9+look,y-hgt*.58,2,2.4);
+      if (musgoAlarm>0){ c.fillStyle='#2a1810'; ell(c,x,y-hgt*.3,5,3.5); } }
+  }
+}
+function drawVid(c,e,t){
+  const x=e.x*T, y=e.y*T, moving=e.moving, ph=moving?t*14:0;
+  c.save(); c.translate(x,y); c.scale(e.face,1);
+  c.fillStyle='rgba(0,0,0,.2)'; ell(c,0,0,11,3.5);
+  c.globalAlpha=.78;
+  c.strokeStyle='#bfe7ef'; c.lineWidth=2;
+  for (let i=0;i<4;i++){ const lx=-7+i*4.5, sw=moving?Math.sin(ph+i*1.6)*2.5:0; c.beginPath(); c.moveTo(lx,-9); c.lineTo(lx+sw,0); c.stroke(); }
+  const g=c.createLinearGradient(0,-20,0,-6); g.addColorStop(0,'#e9fbff'); g.addColorStop(1,'#8fcadb');
+  c.fillStyle=g; ell(c,0,-12,11,6);
+  ell(c,9,-18,4.5,4);
+  c.fillStyle='#d8f4ff'; c.beginPath(); c.moveTo(8,-21); c.lineTo(6,-30); c.lineTo(10,-23); c.closePath(); c.fill(); c.beginPath(); c.moveTo(11,-21); c.lineTo(14,-29); c.lineTo(12,-21); c.closePath(); c.fill();
+  c.globalAlpha=1; c.fillStyle='#1c2a30'; ell(c,10.5,-18.5,1,1);
+  if (hash(Math.floor(t*3),e.hx|0,9)<.2){ c.fillStyle='#fff'; ell(c,-4,-14,1.2,1.2); }
+  c.restore();
+}
+
+/* ================================================================
+   HUELLAS (visibles solo al escuchar)
+   ================================================================ */
+const prints = [];
+function makeTrail(pts,step,col,jit,set,startPhase=0){
+  let acc=startPhase, side=1;
+  for (let i=0;i<pts.length-1;i++){
+    const [x0,y0]=pts[i],[x1,y1]=pts[i+1], L=dist(x0,y0,x1,y1), ang=Math.atan2(y1-y0,x1-x0);
+    for (let d=0; d<L; d+=step*(1+(hash(i,Math.floor(d*10),77)-.5)*jit)){
+      const nx=-Math.sin(ang), ny=Math.cos(ang);
+      prints.push({x:x0+(x1-x0)*d/L+nx*.12*side, y:y0+(y1-y0)*d/L+ny*.12*side, ang, col, k:acc++, set});
+      side=-side;
+    }
+  }
+}
+function buildPrints(){
+  makeTrail([[21.6,53],[19.6,51.8],[17.8,50.6],[16.4,49.6],[16,48.6]], .5, '#e8ab58', .1, 'gate');
+  makeTrail([[22,53.4],[19.9,52.2],[18.2,51],[16.8,50],[16.3,48.8]], .5, '#95dcea', .1, 'gate');
+  makeTrail([[41,36.6],[44,35],[46,34],[52,32.6],[58,31.4],[64,30.8],[69,30.3]], .62, '#e8ab58', .05, 'camp');
+  makeTrail([[39.4,37.8],[42,37],[45,35.2],[50,33.6],[57,31.9],[64,31.2],[69,30.8]], 1.05, '#95dcea', .45, 'camp', 6);
+}
+
+/* ================================================================
+   ENTRADA
+   ================================================================ */
+const keys = new Set();
+const joy = {x:0, y:0, active:false, id:null, ox:0, oy:0};
+let touchRun=false;
+const isTouch = ('ontouchstart' in window) || matchMedia('(pointer: coarse)').matches;
+
+let mode='title'; // title | intro | play | dialog | frag | notebook | menu | settings | ending
+let now=0;
+
+window.addEventListener('keydown', e=>{
+  Snd.init();
+  const k=e.code;
+  if (k==='Tab'){ e.preventDefault(); }
+  if (mode==='intro'){ advanceIntro(); e.preventDefault(); return; }
+  if (mode==='dialog'){ dialogKey(e); return; }
+  if (mode==='frag'){ if (k==='KeyE'||k==='Space'||k==='Enter'||k==='Escape'){ e.preventDefault(); fragAdvance(); } return; }
+  if (mode==='notebook'){ if (k==='Tab'||k==='KeyN'||k==='Escape'){ e.preventDefault(); closeNotebook(); } return; }
+  if (mode==='settings'){ if (k==='Escape') closeSettings(); return; }
+  if (mode==='menu'){ if (k==='Escape') closeMenu(); return; }
+  if (mode!=='play') return;
+  keys.add(k);
+  if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(k)) e.preventDefault();
+  if (e.repeat) return;
+  if (k==='KeyE'||k==='Space'||k==='Enter') doInteract();
+  else if (k==='KeyQ'||k==='KeyR') toggleListen();
+  else if (k==='KeyC'||k==='ControlLeft') toggleCrouch();
+  else if (k==='Tab'||k==='KeyN') openNotebook();
+  else if (k==='KeyM'){ openNotebook('atlas'); }
+  else if (k==='Escape') openMenu();
+});
+window.addEventListener('keyup', e=>keys.delete(e.code));
+window.addEventListener('blur', ()=>keys.clear());
+
+function moveInput(){
+  let x=0,y=0;
+  if (keys.has('KeyW')||keys.has('ArrowUp')||keys.has('KeyZ')) y-=1;
+  if (keys.has('KeyS')||keys.has('ArrowDown')) y+=1;
+  if (keys.has('KeyA')||keys.has('ArrowLeft')) x-=1;
+  if (keys.has('KeyD')||keys.has('ArrowRight')) x+=1;
+  if (joy.active){ x=joy.x; y=joy.y; }
+  const m=Math.hypot(x,y); if (m>1){ x/=m; y/=m; }
+  return {x,y,m:Math.min(m,1)};
+}
+
+/* táctil */
+const stickEl=document.getElementById('stick'), knobEl=document.getElementById('knob');
+cv.addEventListener('touchstart', e=>{
+  Snd.init();
+  if (mode!=='play') return;
+  for (const t of e.changedTouches){
+    if (joy.id===null && t.clientX < VW*.55){
+      joy.id=t.identifier; joy.ox=t.clientX; joy.oy=t.clientY; joy.active=true; joy.x=0; joy.y=0;
+      stickEl.style.left=t.clientX+'px'; stickEl.style.top=t.clientY+'px'; stickEl.style.display='block'; knobEl.style.transform='';
+    }
+  }
+  e.preventDefault();
+},{passive:false});
+cv.addEventListener('touchmove', e=>{
+  for (const t of e.changedTouches) if (t.identifier===joy.id){
+    let dx=t.clientX-joy.ox, dy=t.clientY-joy.oy; const m=Math.hypot(dx,dy), R=48;
+    if (m>R){ dx*=R/m; dy*=R/m; }
+    joy.x=dx/R; joy.y=dy/R; if (Math.hypot(joy.x,joy.y)<.15){ joy.x=0; joy.y=0; }
+    knobEl.style.transform=`translate(${dx}px,${dy}px)`;
+  }
+  e.preventDefault();
+},{passive:false});
+function endTouch(e){ for (const t of e.changedTouches) if (t.identifier===joy.id){ joy.id=null; joy.active=false; joy.x=joy.y=0; stickEl.style.display='none'; } }
+cv.addEventListener('touchend', endTouch); cv.addEventListener('touchcancel', endTouch);
+document.getElementById('tbUse').addEventListener('click', ()=>{ if (mode==='play') doInteract(); });
+document.getElementById('tbListen').addEventListener('click', ()=>{ if (mode==='play') toggleListen(); });
+document.getElementById('tbCrouch').addEventListener('click', ()=>{ if (mode==='play') toggleCrouch(); });
+document.getElementById('tbRun').addEventListener('click', e=>{ touchRun=!touchRun; e.currentTarget.classList.toggle('on',touchRun); });
+
+/* ================================================================
+   UI: TOASTS, REGIÓN, DIÁLOGO, FRAGMENTOS
+   ================================================================ */
+const $ = id => document.getElementById(id);
+function toast(html, cls=''){
+  const d=document.createElement('div'); d.className='toast '+cls; d.innerHTML=html;
+  $('toasts').appendChild(d);
+  setTimeout(()=>{ d.style.transition='opacity .6s'; d.style.opacity='0'; setTimeout(()=>d.remove(),700); }, 4200);
+  while ($('toasts').children.length>4) $('toasts').firstChild.remove();
+}
+let regionTimer=null;
+function showRegion(title, sub){
+  $('regionTitle').textContent=title; $('regionSub').textContent=sub;
+  $('regionName').classList.add('show'); clearTimeout(regionTimer);
+  regionTimer=setTimeout(()=>$('regionName').classList.remove('show'), 3200);
+}
+
+let dlg = null; // {resolve, full, shown, opts, timer}
+function portrait(who){
+  const pc=$('portrait'), c=pc.getContext('2d'), p=CAST[who];
+  c.setTransform(1,0,0,1,0,0); c.clearRect(0,0,144,144);
+  if (!p) return;
+  c.save();
+  if (p.kind==='human'){ c.translate(72,72+31*3.1); c.scale(3.1,3.1); drawHuman(c,0,0,p,'down',0,false,false,false); }
+  else if (p.kind==='kolo'){ c.translate(72,72+44*2.4); c.scale(2.4,2.4); drawKolo(c,0,0,Object.assign({},p,{small:false}),'down',0,false,false); }
+  else if (p.kind==='miga'){ c.translate(72,72); c.scale(4,4); drawMiga(c,0,0,now); }
+  else if (p.kind==='voice'){ c.translate(72,72); c.scale(1.6,1.6); drawVoice(c,0,0,now); }
+  else if (p.kind==='letter'){ c.fillStyle='#e9dcc0'; c.translate(72,72); c.rotate(-.12); c.fillRect(-34,-42,68,84); c.fillStyle='#8a7350'; for (let i=0;i<7;i++) c.fillRect(-26,-30+i*10,i===6?30:52,2); }
+  c.restore();
+}
+function openDialog(who, text, opts){
+  return new Promise(res=>{
+    const p = CAST[who]||CAST.narr;
+    $('dialog').classList.remove('hidden');
+    $('dialog').classList.toggle('noport', p.kind==='none');
+    $('dlgName').textContent = p.name;
+    $('dlgName').className = p.kind==='voice'?'voice':'';
+    $('dlgText').className = p.kind==='none'?'narr':'';
+    portrait(who);
+    const o=$('dlgOpts'); o.innerHTML='';
+    dlg = {resolve:res, full:text, shown:0, opts};
+    $('dlgMore').style.display = opts?'none':'block';
+    if (SET.reduce){ dlg.shown=text.length; }
+    renderDlgText();
+    if (opts && dlg.shown>=text.length) showOpts();
+  });
+}
+function renderDlgText(){ $('dlgText').textContent = dlg.full.slice(0, Math.floor(dlg.shown)); }
+function showOpts(){
+  const o=$('dlgOpts'); if (o.children.length) return;
+  dlg.opts.forEach((t,i)=>{
+    const b=document.createElement('button'); b.className='opt'; b.type='button';
+    b.innerHTML=`<span class="n">${i+1}</span>`; b.appendChild(document.createTextNode(t));
+    b.addEventListener('click', ev=>{ ev.stopPropagation(); pickOpt(i); });
+    o.appendChild(b);
+  });
+  if (!isTouch) setTimeout(()=>{ const f=o.querySelector('button'); if (f) f.focus({preventScroll:true}); },30);
+}
+function pickOpt(i){ if (!dlg) return; const r=dlg.resolve; dlg=null; Snd.chime(520,.4); r(i); }
+function dlgAdvance(){
+  if (!dlg) return;
+  if (dlg.shown < dlg.full.length){ dlg.shown=dlg.full.length; renderDlgText(); if (dlg.opts) showOpts(); return; }
+  if (dlg.opts) return;
+  const r=dlg.resolve; dlg=null; r();
+}
+function dialogKey(e){
+  const k=e.code;
+  if (dlg && dlg.opts && dlg.shown>=dlg.full.length){
+    const n=parseInt(e.key,10);
+    if (n>=1 && n<=dlg.opts.length){ e.preventDefault(); pickOpt(n-1); }
+    return;
+  }
+  if (k==='KeyE'||k==='Space'||k==='Enter'){ e.preventDefault(); dlgAdvance(); }
+}
+$('dialog').addEventListener('click', ()=>dlgAdvance());
+function updateDialog(dt){
+  if (!dlg || dlg.shown>=dlg.full.length) return;
+  dlg.shown += dt*55; renderDlgText();
+  if (dlg.shown>=dlg.full.length && dlg.opts) showOpts();
+}
+const say = (who, text) => openDialog(who, text, null);
+const choose = (who, text, opts) => openDialog(who, text, opts);
+let scriptRunning=false;
+async function run(fn){
+  if (scriptRunning) return;
+  scriptRunning=true; mode='dialog'; keys.clear(); hidePrompt();
+  try{ await fn(); }catch(err){ console.error(err); }
+  $('dialog').classList.add('hidden');
+  scriptRunning=false;
+  if (mode==='dialog') mode='play';
+  updateObjective(); save();
+}
+
+/* Fragmento de resonancia */
+let frag=null;
+function playFragment(id){
+  return new Promise(resolve=>{
+    const r=RES[id];
+    frag={id, i:0, res:r};
+    mode='frag';
+    $('regionName').classList.remove('show');
+    $('frag').classList.remove('hidden');
+    $('fragType').innerHTML = 'Resonancia <span class="tag t-'+r.type+'" style="margin-left:6px">'+r.type+'</span>';
+    $('fragPlace').textContent = r.place;
+    $('fragLines').innerHTML='';
+    Snd.chime(990,1.6);
+    frag.done=resolve;
+    fragAdvance();
+  });
+}
+function fragAdvance(){
+  if (!frag) return;
+  const L=frag.res.lines;
+  if (frag.i < L.length){
+    const [who,txt]=L[frag.i++];
+    const p=document.createElement('p');
+    if (who){ p.className='v'; p.textContent=(CAST[who]?CAST[who].name+': ':'')+txt; }
+    else p.textContent=txt;
+    $('fragLines').appendChild(p);
+    $('fragHint').textContent = frag.i<L.length ? 'Pulsa E, Espacio o toca para seguir escuchando' : 'Pulsa E, Espacio o toca para volver';
+    return;
+  }
+  const id=frag.id, done=frag.done; frag=null;
+  $('frag').classList.add('hidden'); mode='play';
+  const first = !S.heard.includes(id);
+  if (first){ S.heard.push(id); toast('<b>Resonancia registrada:</b> '+RES[id].summary,'res'); }
+  if (done) done(first);
+}
+$('frag').addEventListener('click', ()=>fragAdvance());
+
+/* ================================================================
+   HISTORIA: GUIONES
+   ================================================================ */
+const INTRO = [
+  'Orom recuerda. Los prados guardan pasos, el agua guarda voces y en las Cápsulas duermen sueños que nadie terminó de vivir.',
+  'En la Tribu del Reverso nadie habla de ellas. Hace cuarenta días, Eira y Daren salieron a estudiarlas y no volvieron.',
+  'Su hijo, Nilo, ha dejado de esperar.'
+];
+let introI=0;
+function startIntro(){ mode='intro'; introI=0; $('intro').classList.remove('hidden'); $('introText').textContent=INTRO[0]; }
+function advanceIntro(){
+  introI++;
+  if (introI>=INTRO.length){ $('intro').classList.add('hidden'); beginPlay(true); return; }
+  const t=$('introText'); t.style.animation='none'; void t.offsetWidth; t.style.animation=''; t.textContent=INTRO[introI];
+}
+$('intro').addEventListener('click', advanceIntro);
+
+async function talkTeia(){
+  meet('teia');
+  if (!has('amulet')){
+    await say('teia','Nilo. Has vuelto a mirar la puerta toda la tarde.');
+    await say('teia','Ve a casa, hijo. A veces las casas también hablan, si uno se calla un rato.');
+    return;
+  }
+  if (F('rootsOpen')){
+    if (F('done')) { await say('teia','Has vuelto con los ojos de alguien que ha visto la Ciudad. No te preguntaré nada. Todavía.'); return; }
+    await say('teia', F('noteLeft') ? 'Leí tu nota. No voy a detenerte, pero el fuego seguirá encendido hasta que vuelvas.' : 'Te busqué toda la noche. Pensé que te había perdido como a ellos.');
+    await say('teia','Ten cuidado ahí fuera. Lo que se guarda en las Cápsulas no siempre es lo que pasó.');
+    return;
+  }
+  if (!F('talkedTeia')) await say('teia','Ese amuleto... Eira te lo dejó, entonces. Era de tu abuela.');
+  let loop=true;
+  while (loop){
+    const c = await choose('teia','¿Qué quieres saber?', ['¿Qué son las Cápsulas, Teia?','Voy a salir a buscarlos.','Nada. Buenas noches.']);
+    if (c===0){
+      await say('teia','Hace mucho, en la Gran Vigilia, los sueños empezaron a pasar de una cabeza a otra. Nadie sabía qué recuerdo era suyo.');
+      await say('teia','Las Cápsulas nacieron para guardar ese desorden. Pero alguien empezó a decidir qué se guardaba y qué se borraba.');
+      await say('teia','Nuestros abuelos lo vieron, se apartaron del mundo y decidieron callar. Callar también es una forma de olvidar.');
+    } else if (c===1){
+      await say('teia','La Puerta del Reverso no se abre, Nilo. No por miedo a lo de fuera, sino por miedo a lo que traemos dentro.');
+      await say('teia','Pero tus padres no salieron por la puerta. Eso lo sé. Cómo salieron... no me corresponde decírtelo.');
+      await say('teia','Tu madre decía que los lugares recuerdan. Quizá la puerta recuerde lo que yo he preferido olvidar.');
+      setF('talkedTeia'); loop=false;
+    } else loop=false;
+  }
+}
+async function talkLio(){
+  meet('lio');
+  if (F('rootsOpen')){ await say('lio','¿Has salido? ¿Has SALIDO? ¿Cómo es? No, no me lo cuentes. Sí, cuéntamelo. Luego.'); return; }
+  await say('lio','¡Nilo! Mi abuela dice que eran luciérnagas, pero la noche que se fueron tus padres vi luces junto a las raíces del norte, al lado del altar.');
+  await say('lio','Y las luciérnagas no hablan en susurros.');
+  if (!F('lioTip')){ await say('lio','Otra cosa: si quieres acercarte a algo sin que te oiga, agáchate (C). Así le robo higos a Maru. No se lo digas.'); setF('lioTip'); }
+}
+async function talkMaru(){
+  meet('maru');
+  if (has('amulet')) await say('maru','Tu madre me enseñó un punto de tejido que llamaba «puente». Decía que sirve para unir dos telas que no se parecen en nada.');
+  else await say('maru','Tejo una manta con un hilo por cada región que no veremos nunca. Eso dice Teia. Yo creo que algún hilo se escapará.');
+}
+async function homeDoor(){
+  if (!has('amulet')){
+    await say('nilo','Todo sigue donde lo dejaron. La taza de mamá. Las botas viejas de papá.');
+    await say('narr','Bajo la manta del baúl encuentras un sobre atado con fibra y un amuleto de cerámica con un ojo grabado.');
+    await say('carta','«Nilo: si lees esto, hemos tardado más de lo prometido. No dejes que te cuenten que las Cápsulas son solo peligro. Tampoco que son solo un regalo.»');
+    await say('carta','«El amuleto era de tu abuela. Vibra cerca de los lugares que recuerdan. Si lo necesitas, cierra los ojos y escucha. Te queremos. E. y D.»');
+    give('letter'); give('amulet'); meet('eira'); meet('daren');
+    toast('<b>Nueva habilidad:</b> Escucha de Resonancias. Pulsa Q para escuchar.','res');
+    await say('nilo','Escuchar... ¿escuchar qué?');
+  } else {
+    await say('narr','La casa está en silencio. El amuleto pesa un poco más que antes.');
+  }
+}
+async function gateDesc(){
+  await say('narr','La Puerta del Reverso: troncos atados con fibra vieja y un travesaño que ni tres adultos podrían mover.');
+  if (has('amulet') && !S.heard.includes('gateSteps')) await say('narr','El amuleto tiembla un poco aquí. Algo resuena cerca. (Pulsa Q)');
+}
+async function rootsAct(){
+  if (F('rootsOpen')){ await say('narr','El pasaje entre las raíces. Al otro lado esperan los Prados.'); return; }
+  if (!S.heard.includes('gateSteps')){ await say('narr','Un muro de raíces colgantes cubre la roca. Huele a tierra mojada... y a aire de fuera.'); return; }
+  await say('narr','Las huellas luminosas desaparecen tras las raíces. Al apartarlas, sientes aire fresco: hay un pasaje.');
+  const c = await choose('narr','Antes de irte, ¿dejas algo en el altar para Teia?', ['Dejar una nota: «Voy a buscarlos. Volveré.»','Irme sin decir nada.']);
+  setF('noteLeft', c===0);
+  setF('rootsOpen');
+  await say('nilo', c===0 ? 'Así sabrá que no huyo. Que voy a volver.' : 'Si se lo digo, me detendrá. Mejor así.');
+  Snd.chime(440,1.4);
+}
+async function altarAct(){
+  await say('narr','Un altar de piedra con tres símbolos gastados: un ojo, una espiral y una Cápsula cerrada.');
+  if (F('noteLeft')) await say('narr','Tu nota sigue aquí, sujeta con una piedra.');
+}
+async function itemAct(e){
+  const it=e.item;
+  if (it==='notebook'){
+    await say('narr','Un cuaderno de cuero, empapado y roto. Es la letra de tu madre.');
+    await say('eira','«Día 38. Oru tenía razón: el registro de la Vigilia fue cambiado. Borraron a los que se negaron a dormir.»');
+    await say('eira','«Tengo que ver el Archivo con mis propios ojos. D. dice que es peligroso. Lo es.»');
+    give('notebook'); setF('campNotebook'); checkEvidence();
+    return;
+  }
+  const lines = {
+    button:'Entre la hierba alta asoma un botón de cerámica azul. Sin abrigo, sin dueño.',
+    key:'Bajo el arco, medio enterrada, una llave que no parece abrir nada.',
+    bell:'En la orilla, una campanilla rajada. Al moverla suena desafinada.'
+  };
+  await say('narr', lines[it]);
+  give(it);
+  if (!F('metBoro')) await say('nilo','Qué cosa más inútil. Me la llevo.');
+}
+function checkEvidence(){
+  if (!F('mysteryOpen') && evidenceCount()>=MYSTERY.need && !F('mysterySolved')){
+    setF('mysteryOpen');
+    toast('<b>Tienes suficientes pistas.</b> Abre el cuaderno (Tab) y formula una hipótesis.');
+  }
+}
+async function talkBoro(){
+  const npc=ents.find(e=>e.id==='boro');
+  meet('boro');
+  if (!F('metBoro')){
+    await say('boro','¡Oh! Un humano. Y con un amuleto de los que ya no se hacen.');
+    await say('boro','Soy Boro. Colecciono cosas que la gente cree inútiles. Un botón sin abrigo, una llave sin puerta... ¿Sabes qué tienen en común?');
+    const c = await choose('nilo','', ['¿Que no sirven para nada?','¿Que alguien las perdió?']);
+    await say('boro', c===0 ? '¡Que todavía no sabemos para qué sirven! Ja.' : 'Exacto. Y quien pierde algo deja una historia colgando de ello.');
+    await say('boro','Me faltan tres piezas de los Prados: un botón de cerámica, una llave sin cerradura y una campanilla rajada. Andan entre la hierba, bajo el arco y junto al lago.');
+    setF('metBoro');
+  } else if (F('boroInvaded') && !F('boroForgave')){
+    await say('boro','Abriste mi Cápsula sin preguntarme. Lo noté aquí, detrás de los ojos.');
+    const c = await choose('nilo','', ['Lo siento. Fue mi madre quien estaba en ese recuerdo.','Necesitaba saberlo.']);
+    if (c===0){ await say('boro','...Tu madre. Entonces la campanilla era suya. Lo sabía sin saberlo.'); await say('boro','Te perdono a medias. Es lo que hay, de momento.'); setF('boroForgave'); }
+    else { await say('boro','Todo el mundo necesita saber cosas. Por eso existen los Custodios.'); return; }
+  }
+  if (F('boroConsent') && S.heard.includes('boroCapsule') && !F('boroTold')){
+    await say('boro','¿Y bien? ¿Qué había en mi recuerdo?');
+    const c = await choose('nilo','', ['Era mi madre. Le pediste olvidarla para protegerla.','Algo que hiciste por alguien. Era bueno.']);
+    if (c===0) await say('boro','...Eira. Ahora el nombre vuelve, como un olor. Fue lo correcto, ¿verdad? Gracias por contármelo.');
+    else await say('boro','Me basta con eso. Gracias por no quitármelo todo.');
+    await say('boro','Toma. La encontré junto a mi fuego la noche que olvidé. Siempre pensé que era de alguien a quien quería.');
+    give('pin'); setF('boroTold');
+  }
+  let loop=true;
+  while (loop){
+    const opts=[], acts=[];
+    opts.push('¿Has visto a dos humanos?'); acts.push('witness');
+    opts.push('¿Qué hay en el puente del este?'); acts.push('musgo');
+    if (has('button')||has('key')||has('bell')){ opts.push('Te traigo cosas para tu colección.'); acts.push('give'); }
+    opts.push('¿Puedo descansar junto a tu fuego?'); acts.push('rest');
+    opts.push('Hasta luego, Boro.'); acts.push('bye');
+    const c = await choose('boro', F('boroGiftDone')?'Mi colección está completa. ¿Algo más?':'¿Qué te trae por mi árbol?', opts);
+    const a=acts[c];
+    if (a==='witness'){
+      await say('boro','Hace unas semanas. Una humana con un cuaderno cruzó hacia el puente del este. Caminaba como quien ya ha decidido algo.');
+      await say('boro','Un rato después pasó un humano corriendo y gritando un nombre. Nadie los llevaba a ellos: ellos llevaban prisa.');
+      if (!F('boroWitness')){ setF('boroWitness'); toast('<b>Pista:</b> testimonio de Boro'); checkEvidence(); }
+    } else if (a==='musgo'){
+      await say('boro','Un musgoso. Grande como una choza y tímido como un ratón. Se asusta con los pasos fuertes.');
+      await say('boro','Dicen que la flor de eco lo calma. Solo se abre de noche, cerca del lago.');
+      await say('boro','Y de noche duerme. Si pasas agachado, a lo mejor ni se entera.');
+      learnBeast('musgoso'); learnBeast('flor'); setF('knowMusgo');
+    } else if (a==='give'){
+      for (const it of ['button','key','bell']) if (has(it)){ take(it); S.flags['col_'+it]=true; }
+      const n=['button','key','bell'].filter(i=>F('col_'+i)).length;
+      if (n<3){ await say('boro',`¡Maravilloso! Ya tengo ${n} de 3. La colección empieza a contar algo.`); }
+      else { await boroStory(); }
+    } else if (a==='rest'){
+      await restChoice(npc);
+    } else loop=false;
+  }
+}
+async function boroStory(){
+  setF('boroGiftDone');
+  await say('boro','Un botón, una llave, una campanilla. Escucha cómo suenan juntos.');
+  await say('boro','Te contaré algo. Hace tiempo dejé ir unos recuerdos. Los guardé en esa Cápsula sellada, junto al árbol. No me los quitaron: los entregué yo, para proteger a alguien.');
+  await say('boro','No recuerdo a quién. Solo sé que fue lo correcto.');
+  const c = await choose('nilo','', ['¿Me dejarías escuchar ese recuerdo?','Es tuyo. No necesito oírlo.']);
+  if (c===0){
+    await say('boro','...Nadie me lo había preguntado antes. Los Custodios simplemente leen.');
+    await say('boro','Sí. Si te ayuda, escúchalo. Pero luego cuéntame qué había.');
+    setF('boroConsent');
+  } else {
+    await say('boro','Gracias. De verdad.');
+    await say('boro','Toma esto. Lo encontré junto a mi fuego la noche en que olvidé. Siempre pensé que era de alguien a quien quería.');
+    give('pin'); setF('boroRespected');
+    await say('nilo','Una espiral... como la del altar de casa. Es de mamá.');
+  }
+}
+async function restChoice(){
+  const c = await choose('narr','El fuego cruje. ¿Cuánto descansas?', ['Hasta que anochezca.','Hasta el amanecer.','Mejor sigo.']);
+  if (c===2) return;
+  const target = c===0 ? .84 : .27;
+  S.time = target;
+  await say('narr', c===0 ? 'Cierras los ojos. Cuando los abres, el cielo se ha vuelto violeta.' : 'Duermes sin soñar. Te despierta el olor del rocío.');
+}
+async function talkPimTolo(){
+  meet('pimtolo');
+  if (S.flags.cloud){
+    const n=S.flags.cloud;
+    await say('pim', n==='libre' ? 'La nube sin nombre se convirtió en un pez. Tenías razón, humano.' : `La nube «${n}» se ha deshecho, pero el nombre se queda. Así funcionan las cosas aquí.`);
+    await say('tolo','Ahora discutimos si las piedras sueñan. Pim dice que sí. Pim está equivocado.');
+    return;
+  }
+  await say('pim','¡Es una Nube Tostada! Mira ese borde dorado.');
+  await say('tolo','Es claramente el Señor Algodón. Tiene bigote. Míralo.');
+  const c = await choose('pim','Humano, decide tú. ¿Cómo se llama esa nube?', ['Nube Tostada.','Señor Algodón.','Que no tenga nombre. Así puede cambiar de forma.']);
+  if (c===0){ S.flags.cloud='Nube Tostada'; await say('pim','¡JA! Tostada. Tolo, apúntalo en la piedra de los nombres.'); await say('tolo','...Esto no se acaba aquí.'); }
+  else if (c===1){ S.flags.cloud='Señor Algodón'; await say('tolo','Por fin alguien con ojos. Buenas tardes, Señor Algodón.'); await say('pim','Tiene bigote porque se lo has puesto tú, Tolo.'); }
+  else { S.flags.cloud='libre'; await say('pim','¿Sin... nombre?'); await say('tolo','Es lo más bonito y lo más inquietante que he oído esta semana.'); }
+}
+async function flowerAct(e){
+  if (F('pick_'+e.id) || has('flower')){ await say('narr','Las flores de eco susurran tu respiración de vuelta.'); return; }
+  if (!isNight()){ await say('narr','Un capullo cerrado de flor de eco. Huele a lluvia. Quizá se abra de noche.'); return; }
+  await say('narr','La flor de eco se abre bajo la luna y repite en susurros tu propia respiración.');
+  setF('pick_'+e.id); give('flower'); learnBeast('flor');
+}
+async function musgoAct(e){
+  learnBeast('musgoso');
+  if (F('musgoCalm')){ await say('narr','El musgoso ronronea como un trueno lejano. Huele a lluvia.'); return; }
+  if (has('flower')){
+    await say('narr','Le tiendes la flor de eco. El musgoso olfatea, se estremece... y suelta un suspiro larguísimo que huele a lluvia.');
+    await say('narr','Se aparta del puente, se acomoda en la orilla y te mira como si te conociera de siempre.');
+    take('flower'); setF('musgoCalm'); Snd.chime(392,1.8);
+    return;
+  }
+  if (musgoAsleep()){ await say('narr','Duerme. Ronca como un tambor de lluvia. Si pasas agachado y despacio, quizá no despierte.'); return; }
+  if (S.crouch){ await say('narr','Agachado y quieto, lo observas de cerca. Tiembla cada vez que oye pasos. Olfatea hacia el lago, como si buscara algo.'); setF('watchedMusgo'); return; }
+  await say('narr','El musgoso te mira de reojo y bufa. Tus pasos lo ponen nervioso.');
+}
+async function signAct(){ await say('narr','Un poste tallado: «Ciudad de las Mil Cápsulas →». Debajo, alguien ha rascado: «No despertéis al musgoso».'); }
+async function capsuleAct(e){
+  const txt = {
+    cap_camp:'Una Cápsula pequeña, de campaña. Está Dañada: su luz parpadea y de dentro salen frases a medias.',
+    cap_boro:'Una Cápsula Sellada, rodeada de nudos de fibra violeta. Al lado, un cartel torcido: «De Boro. No tocar».',
+    cap_s1:'Cápsula Estable. Una luz tranquila late dentro. Un letrero: «Recuerdos de cumpleaños. Acceso libre».',
+    cap_s2:'Cápsula Inactiva. No responde. Está fría, como una piedra en invierno.',
+    cap_s3:'Cápsula Dañada. Una grieta atraviesa la cúpula y deja escapar frases a medias: «...no era mío...», «...firma aquí...».',
+    cap_s4:'Cápsula Sellada. Una placa: «Sellada por voluntad de su dueña. Nadie la abrirá sin su permiso».',
+    cap_s5:'Cápsula Estable. Dentro, alguien ha guardado el olor de un pan recién hecho. Nada más. Nada menos.',
+    cap_archive:'La Cápsula Archivo. Enorme y Anómala: su luz cambia de color sin ritmo, como si dudara.'
+  }[e.id];
+  await say('narr', txt);
+}
+async function talkGuard(){
+  await say('guard','Alto. La Ciudad de las Mil Cápsulas no recibe a viajeros sin registro.');
+  await say('guard','Vuelve con un sello de la Liga de las Cápsulas... o cuando la Liga deje de existir, je.');
+  if (F('done')) await say('narr','Esta puerta se abrirá en el próximo capítulo.');
+}
+async function talkOru(){
+  meet('oru');
+  if (!F('metOru')){
+    await say('oru','Vaya. Un humano del Reverso, con el amuleto de su abuela y los ojos de su madre.');
+    await say('oru','Soy Oru. Guardo lo que otros prefieren olvidar.');
+    setF('metOru');
+  }
+  if (F('done')){ await say('oru','El Umbral Dormido te espera, Nilo. Y yo seguiré aquí, guardando lo que nadie quiere oír.'); return; }
+  if (!F('mysterySolved')){
+    await say('oru','Antes de abrirte el Archivo, dime: ¿qué pasó en el campamento junto al arco?');
+    await say('oru','Vuelve cuando lo hayas entendido. Tu cuaderno te ayudará a ordenar las piezas.');
+    return;
+  }
+  if (!F('oruTalk')){
+    await say('nilo','Mamá fue por voluntad propia. Papá corrió tras ella. Y alguien cambió el registro.');
+    await say('oru','Sí. Eira era intérprete: sabía leer lo que las Cápsulas callan. Descubrió que el registro de la Gran Vigilia había sido alterado.');
+    await say('oru','A quienes se negaron a dormir en las Cápsulas se les borró de la historia. Los llamamos Desvanecidos.');
+    await say('oru','Quien lo ordenó sigue aquí. Lo llaman el Primer Custodio.');
+    await say('oru','La Cápsula Archivo está Anómala desde que tu madre la tocó. A mí no me responde. Escúchala tú.');
+    setF('oruTalk'); meet('custodio');
+    return;
+  }
+  await say('oru','La Cápsula Archivo, Nilo. Activa la Escucha frente a su puerta.');
+}
+async function finale(){
+  await say('oru','Ahora sabes adónde fueron: al Umbral Dormido, donde nacieron las Cápsulas.');
+  await say('oru','Queda un último fragmento, marcado con el nombre de tu madre. Es privado. Lo dejó para ti.');
+  const c = await choose('oru','¿Qué haces con él?', ['Escucharlo ahora.','Guardarlo para cuando los encuentre.']);
+  if (c===0){
+    await say('eira','«Nilo. Si me oyes aquí, es que has llegado lejos. No te pido que vengas. Te pido que elijas tú.»');
+    await say('eira','«Recordar no es lo mismo que saber la verdad. Y proteger a alguien no es decidir por él.»');
+    setF('privateNow');
+  } else {
+    await say('oru','Bien. Un recuerdo que uno elige guardar sigue siendo suyo.');
+    setF('privateKept');
+  }
+  const d = await choose('oru','Una última pregunta. Te la harán muchas veces de aquí al Umbral: si pudieras decidir, ¿qué harías con las Cápsulas?',
+    ['Conectarlas todas: que nadie vuelva a sufrir.','Romperlas todas: que nadie vuelva a decidir por otros.','Que sigan existiendo, pero que nadie tenga autoridad sobre los recuerdos de otro.']);
+  S.flags.philo = ['integracion','ruptura','reverso'][d];
+  await say('oru', ['Es lo que quiere el Primer Custodio. Él también lo dice por amor. Piénsalo despacio.',
+    'Libres... y a la intemperie. Habrá quien no sepa vivir sin ellas. Piénsalo despacio.',
+    'El reverso. Ni un sueño perfecto ni un mundo roto. Es el camino más difícil. Piénsalo despacio.'][d]);
+  await say('oru','Guarda tu respuesta. Puede cambiar, y eso también está bien.');
+  setF('done');
+}
+
+/* ================================================================
+   INTERACCIONES
+   ================================================================ */
+function isNight(){ return darkness() > .55; }
+function musgoAsleep(){ return isNight() && !F('musgoCalm') && musgoAlarm<=0; }
+
+function interactionFor(e){
+  const near = (r)=>dist(S.p.x,S.p.y,e.x,e.y)<=r;
+  switch(e.type){
+    case 'npc': {
+      if (!near(1.6)) return null;
+      const fn={teia:talkTeia, lio:talkLio, maru:talkMaru, boro:talkBoro, pim:talkPimTolo, tolo:talkPimTolo, oru:talkOru, guard:talkGuard}[e.id];
+      const nm = e.id==='pim'||e.id==='tolo' ? 'Pim y Tolo' : CAST[e.who].name;
+      return {label:'Hablar con '+nm, act:()=>{ e.talking=true; run(fn).then(()=>e.talking=false); }};
+    }
+    case 'door': return near(1.3) ? {label: has('amulet')?'Entrar en casa':'Entrar en la casa de tus padres', act:()=>run(homeDoor)} : null;
+    case 'gatedesc': return near(1.6) ? {label:'Examinar la Puerta del Reverso', act:()=>run(gateDesc)} : null;
+    case 'roots': return near(1.4) ? {label: F('rootsOpen')?'Pasaje de raíces':'Examinar las raíces', act:()=>run(rootsAct)} : null;
+    case 'altar': return near(1.3) ? {label:'Examinar el altar', act:()=>run(altarAct)} : null;
+    case 'item': return (!F('got_'+e.id) && near(1.1)) ? {label:'Recoger '+ITEMS[e.item].name.toLowerCase(), act:()=>{ setF('got_'+e.id); run(()=>itemAct(e)); }} : null;
+    case 'flower': return near(1.2) ? {label: isNight()&&!has('flower')&&!F('pick_'+e.id)?'Coger la flor de eco':'Examinar la flor', act:()=>run(()=>flowerAct(e))} : null;
+    case 'musgo': return near(2.6) ? {label: has('flower')&&!F('musgoCalm')?'Ofrecer la flor de eco':'Observar al musgoso', act:()=>run(()=>musgoAct(e))} : null;
+    case 'sign': return near(1.3) ? {label:'Leer el poste', act:()=>run(signAct)} : null;
+    case 'capsule': return near(e.r+1.1) ? {label:'Examinar la Cápsula ('+e.state+')', act:()=>run(()=>capsuleAct(e))} : null;
+    case 'fire': return (e.id==='fireTribe' && near(1.6)) ? {label:'Descansar junto al fuego', act:()=>run(restChoice)} : null;
+    case 'res': return resInteraction(e);
+  }
+  return null;
+}
+function resAvailable(e){
+  if (!has('amulet')) return false;
+  if (e.res==='archive' && !F('oruTalk')) return false;
+  return true;
+}
+function resInteraction(e){
+  if (!resAvailable(e) || dist(S.p.x,S.p.y,e.x,e.y)>1.5) return null;
+  const heard = S.heard.includes(e.res);
+  if (!S.listening) return {label:'Algo resuena aquí', key:'Q', res:true, act:()=>toggleListen()};
+  if (e.res==='boroCapsule' && !F('boroConsent') && !heard){
+    return {label:'Escuchar la Cápsula sellada', res:true, act:()=>run(async()=>{
+      await say('narr','Esta Cápsula está sellada. Es de Boro. Sus recuerdos no son tuyos.');
+      const c = await choose('narr','', ['Forzar la escucha.','Dejarla en paz.']);
+      if (c===0){ setF('boroInvaded'); mode='play'; scriptRunning=false; $('dialog').classList.add('hidden'); await hear(e); }
+    })};
+  }
+  return {label: heard?'Volver a escuchar':'Escuchar el recuerdo', res:true, act:()=>hear(e)};
+}
+async function hear(e){
+  hidePrompt();
+  const first = await playFragment(e.res);
+  if (e.res==='fragments' && !F('miga')){ setF('miga'); miga.x=e.x; miga.y=e.y-.5; meet('miga'); learnBeast('miga');
+    run(async()=>{ await say('miga','¡Frsss! Krr-krr.'); await say('nilo','Te llamaré Miga. Pareces una miga de pan quemado.'); await say('miga','Krr.'); }); }
+  if (e.res==='gateSteps' && first) toast('Con la Escucha activa, las huellas de tus padres brillan en el suelo.','res');
+  if (e.res==='campSteps' && first) toast('Mira las dos líneas de huellas: dorada y azul. ¿Cómo camina cada una?','res');
+  if ((e.res==='campSteps'||e.res==='campCapsule') && S.heard.includes('campSteps') && S.heard.includes('campCapsule') && !F('contraNoted')){
+    setF('contraNoted'); toast('<b>Contradicción:</b> el registro de la Cápsula y las huellas no cuentan lo mismo.','res');
+  }
+  if (['campSteps','campScarf','campCapsule'].includes(e.res)) checkEvidence();
+  if (e.res==='archive' && first){ run(finale).then(()=>{ if (F('done')) showEnding(); }); }
+  updateObjective(); save();
+}
+
+let currentAct=null;
+function findInteraction(){
+  let best=null, bd=1e9;
+  for (const e of ents){
+    const it = interactionFor(e); if (!it) continue;
+    let d=dist(S.p.x,S.p.y,e.x,e.y);
+    if (it.res && S.listening) d-=.6;
+    if (d<bd){ bd=d; best=it; }
+  }
+  return best;
+}
+function doInteract(){ if (currentAct) currentAct.act(); }
+function hidePrompt(){ $('prompt').classList.add('hidden'); }
+function updatePrompt(){
+  const p=$('prompt');
+  if (mode!=='play' || !currentAct){ p.classList.add('hidden'); return; }
+  const key = currentAct.key || (isTouch?'Usar':'E');
+  const k2 = currentAct.key==='Q' && isTouch ? 'Escuchar' : key;
+  p.innerHTML=`<b>${k2}</b>`; p.appendChild(document.createTextNode(currentAct.label));
+  p.classList.toggle('res', !!currentAct.res);
+  p.classList.remove('hidden');
+}
+$('prompt').addEventListener('click', ()=>{ if (mode==='play') doInteract(); });
+
+function toggleListen(){
+  if (!has('amulet')){ toast('Aún no sabes cómo escuchar a los lugares.'); return; }
+  S.listening=!S.listening; Snd.listen(S.listening); if (S.listening) Snd.chime(1174,.7);
+  $('chipListen').classList.toggle('on',S.listening); $('tbListen').classList.toggle('on',S.listening);
+}
+function toggleCrouch(){
+  S.crouch=!S.crouch;
+  $('chipCrouch').classList.toggle('on',S.crouch); $('tbCrouch').classList.toggle('on',S.crouch);
+}
+
+/* ================================================================
+   OBJETIVO
+   ================================================================ */
+function objectiveText(){
+  if (!has('amulet')) return 'Busca en la casa de tus padres algo que explique su ausencia.';
+  if (!F('talkedTeia') && !F('rootsOpen')) return 'Habla con la anciana Teia junto al fuego comunal.';
+  if (!F('rootsOpen')) return S.heard.includes('gateSteps') ? 'Sigue las huellas luminosas (Escucha activa) hasta el altar del norte.' : 'Teia dice que la puerta recuerda algo. Acércate a ella y escucha (Q).';
+  if (F('done')) return 'Capítulo I completado. Puedes seguir explorando los Prados.';
+  if (!F('mysterySolved')){
+    if (F('mysteryOpen')) return 'Abre el cuaderno (Tab) y formula una hipótesis sobre el campamento.';
+    return `Investiga el campamento abandonado al este del arco de piedra (${evidenceCount()}/${MYSTERY.need} pistas).`;
+  }
+  const crossed = S.p.x>73.5 || F('crossed');
+  if (!crossed) return F('musgoCalm') ? 'Cruza el puente del este hacia la Ciudad de las Mil Cápsulas.' : 'Cruza el puente del este. Algo grande lo vigila.';
+  if (!F('oruTalk')) return 'Busca a Madre Oru a las puertas de la Ciudad de las Mil Cápsulas.';
+  return 'Escucha la Cápsula Archivo, frente a su puerta.';
+}
+function updateObjective(){ if (S) $('objText').textContent=objectiveText(); }
+
+/* ================================================================
+   SIMULACIÓN
+   ================================================================ */
+const P_R = .28;
+function solidAt(x,y){
+  const tx=Math.floor(x), ty=Math.floor(y), t=tileAt(tx,ty);
+  if (t===VOID||t===WATER||t===ROCK||t===RED||t===GATE) return true;
+  if (t===ROOTS) return !F('rootsOpen');
+  return block[idx(tx,ty)]===1;
+}
+function collides(x,y){
+  return solidAt(x-P_R,y-P_R*.6)||solidAt(x+P_R,y-P_R*.6)||solidAt(x-P_R,y+P_R*.6)||solidAt(x+P_R,y+P_R*.6) || musgoBlocks(x,y);
+}
+const musgo = () => ents.find(e=>e.id==='musgo');
+let musgoAlarm=0, knock=null, shake=0;
+function musgoBlocks(x,y){
+  if (F('musgoCalm')) return false;
+  const m=musgo(); const r = musgoAsleep()? .78 : 1.25;
+  return dist(x,y,m.x,m.y) < r + P_R;
+}
+function updateMusgo(dt, speedNow){
+  const m=musgo();
+  if (F('musgoCalm')){ m.x=lerp(m.x,69.2,dt*.8); m.y=lerp(m.y,27.6,dt*.8); return; }
+  if (musgoAlarm>0) musgoAlarm-=dt;
+  const d=dist(S.p.x,S.p.y,m.x,m.y);
+  const loud = speedNow>0.1 && !S.crouch;
+  const asleep = musgoAsleep();
+  if (!knock && d<(asleep?1.9:2.3) && (asleep ? loud : !S.crouch)){
+    musgoAlarm=2.2; Snd.thud(); if (!SET.reduce) shake=.35;
+    const dx=S.p.x-m.x, dy=S.p.y-m.y, L=Math.hypot(dx,dy)||1;
+    knock={vx:dx/L*7, vy:dy/L*3, t:.35};
+    S.flags.pushes=(S.flags.pushes||0)+1;
+    learnBeast('musgoso');
+    if (S.flags.pushes===1) toast(asleep?'El musgoso despierta sobresaltado y te aparta. ¿Y si pasas agachado?':'El musgoso te aparta con un resoplido. Parece asustado, no enfadado.');
+    else if (S.flags.pushes===3) toast('Pista: Boro, junto al gran árbol del norte, sabe mucho de musgosos.');
+  }
+}
+function moveP(dx,dy){
+  if (dx!==0){ const nx=S.p.x+dx; if (!collides(nx,S.p.y)) S.p.x=nx; }
+  if (dy!==0){ const ny=S.p.y+dy; if (!collides(S.p.x,ny)) S.p.y=ny; }
+}
+let pMoving=false, lastRegion='', exploreTimer=0, saveTimer=0;
+function update(dt){
+  now += dt;
+  if (!S) return;
+  if (mode==='play'||mode==='dialog'||mode==='frag'||mode==='ending'){
+    S.time = (S.time + dt/360) % 1;
+  }
+  if (mode==='play') S.played+=dt;
+  let speedNow=0;
+  if (mode==='play'){
+    const inp=moveInput();
+    const run = (keys.has('ShiftLeft')||keys.has('ShiftRight')||touchRun) && !S.crouch;
+    const sp = (S.crouch?1.6:run?5.6:3.3)*inp.m;
+    if (knock){ moveP(knock.vx*dt, knock.vy*dt); knock.t-=dt; if (knock.t<=0) knock=null; }
+    else if (inp.m>0.05){
+      moveP(inp.x*sp*dt, inp.y*sp*dt);
+      if (Math.abs(inp.x)>Math.abs(inp.y)) S.p.face = inp.x<0?'left':'right'; else S.p.face = inp.y<0?'up':'down';
+      speedNow=sp;
+    }
+    pMoving = speedNow>.1;
+    S.p.speed = speedNow; S.p.run = run && pMoving;
+    if (S.p.x>73.5 && !F('crossed')){ setF('crossed'); if (!F('musgoCalm')) setF('sneaked'); updateObjective(); }
+  } else pMoving=false;
+  updateMusgo(dt, speedNow);
+  updateNPCs(dt);
+  updateVids(dt, speedNow);
+  updateMiga(dt);
+  if (shake>0) shake-=dt;
+
+  // exploración del atlas
+  exploreTimer-=dt;
+  if (exploreTimer<=0){
+    exploreTimer=.25;
+    const R=7; for (let y=Math.floor(S.p.y-R);y<=S.p.y+R;y++) for (let x=Math.floor(S.p.x-R);x<=S.p.x+R;x++)
+      if (x>=0&&y>=0&&x<W&&y<H && dist(x+.5,y+.5,S.p.x,S.p.y)<R) S.explored[idx(x,y)]=1;
+    const rg=regionAt(S.p.x,S.p.y);
+    if (rg.name!==lastRegion){
+      if (lastRegion && mode!=='title') showRegion(rg.name, rg.sub);
+      lastRegion=rg.name; Snd.setRegion(rg.key);
+    }
+  }
+  if (mode==='play'){ currentAct=findInteraction(); updatePrompt(); }
+  saveTimer-=dt; if (saveTimer<=0 && mode==='play'){ saveTimer=8; save(); }
+  updateDialog(dt);
+  updateHUD();
+}
+function regionAt(x,y){
+  if (dist(x,y,TRIBE.x,TRIBE.y) < TRIBE.r+.6) return {name:'La Tribu del Reverso', sub:'Zona inicial', key:'tribe'};
+  if (x>=73.6) return {name:'La Ciudad de las Mil Cápsulas', sub:'Puertas de la Ciudad', key:'ciudad'};
+  if (x>=68.5) return {name:'El Puente del Musgoso', sub:'Los Prados que Recuerdan', key:'prados'};
+  if (y<11) return {name:'Lindes del Bosque del Revés', sub:'Camino cerrado', key:'bosque'};
+  if (x>=38 && y>=49) return {name:'Las Gargantas Silentes', sub:'Cañones y restos antiguos', key:'gargantas'};
+  return {name:'Los Prados que Recuerdan', sub:'Llanuras, lagos y ruinas', key:'prados'};
+}
+
+function updateNPCs(dt){
+  const night=isNight();
+  for (const n of ents){
+    if (n.type!=='npc') continue;
+    if (n.talking){ n.moving=false; n.face=faceTo(n,S.p); continue; }
+    let goal=null;
+    if (n.night && night) goal=n.night;
+    else if (n.home) goal=n.home;
+    if (n.route && !(n.night && night)){
+      if (n.wait>0){ n.wait-=dt; n.moving=false; continue; }
+      if (!n.goal) n.goal=n.route[Math.floor(Math.random()*n.route.length)];
+      goal=n.goal;
+    }
+    if (!goal){ n.moving=false; continue; }
+    const dx=goal.x-n.x, dy=goal.y-n.y, d=Math.hypot(dx,dy);
+    if (d<.08){
+      n.moving=false; n.goal=null; n.wait=2+Math.random()*4;
+      n.face = n.look || (dist(n.x,n.y,S.p.x,S.p.y)<3 ? faceTo(n,S.p) : n.face||'down');
+      continue;
+    }
+    const sp=Math.min(1.1*dt,d); n.x+=dx/d*sp; n.y+=dy/d*sp; n.moving=true;
+    n.face = Math.abs(dx)>Math.abs(dy) ? (dx<0?'left':'right') : (dy<0?'up':'down');
+  }
+}
+function faceTo(a,b){ const dx=b.x-a.x, dy=b.y-a.y; return Math.abs(dx)>Math.abs(dy)?(dx<0?'left':'right'):(dy<0?'up':'down'); }
+
+function vidFree(x,y){
+  const t=tileAt(Math.floor(x),Math.floor(y));
+  return (t===GRASS||t===FLOW||t===SAND||t===PATH) && !block[idx(Math.floor(x),Math.floor(y))] && x<68;
+}
+function updateVids(dt, speedNow){
+  for (const v of ents){
+    if (v.type!=='vid') continue;
+    const d=dist(v.x,v.y,S.p.x,S.p.y);
+    const run=S.p.run, crouch=S.crouch;
+    let sp=0;
+    if (mode==='play' && ((run && d<5.5) || (!crouch && speedNow>.1 && d<2.6) || (!crouch && d<1.4))){
+      v.st='flee'; v.fleeT=1.6;
+      if (!F('sawFlee')){ setF('sawFlee'); learnBeast('vidriero'); }
+    }
+    if (v.st==='flee'){
+      v.fleeT-=dt; const dx=v.x-S.p.x, dy=v.y-S.p.y, L=Math.hypot(dx,dy)||1;
+      v.gx=v.x+dx/L*2; v.gy=v.y+dy/L*2; sp=4.2;
+      if (v.fleeT<=0) { v.st='wander'; v.wait=1+Math.random()*2; }
+    } else if (crouch && d<3.5 && mode==='play'){
+      v.st='curious'; v.gx=lerp(v.x,S.p.x,.5); v.gy=lerp(v.y,S.p.y,.5); sp = d>1.3?0.7:0;
+      if (!F('vidCurious')){ setF('vidCurious'); learnBeast('vidriero'); toast('El vidriero se acerca, curioso. Agachado no le das miedo.'); }
+    } else {
+      if (v.st==='curious') v.st='wander';
+      if (v.wait>0){ v.wait-=dt; v.moving=false; continue; }
+      if (dist(v.x,v.y,v.gx,v.gy)<.15){ v.gx=v.hx+(Math.random()-.5)*7; v.gy=v.hy+(Math.random()-.5)*5; v.wait=1.5+Math.random()*3; }
+      sp=.8;
+    }
+    const dx=v.gx-v.x, dy=v.gy-v.y, L=Math.hypot(dx,dy);
+    if (L>.05 && sp>0){
+      const nx=v.x+dx/L*sp*dt, ny=v.y+dy/L*sp*dt;
+      if (vidFree(nx,ny)){ v.x=nx; v.y=ny; v.moving=true; v.face=dx<0?-1:1; }
+      else { v.gx=v.hx; v.gy=v.hy; v.moving=false; }
+    } else v.moving=false;
+  }
+}
+const miga = {x:0,y:0,tx:0,ty:0,hintT:6,seek:null,seekT:0};
+function updateMiga(dt){
+  if (!S || !F('miga')) return;
+  miga.hintT-=dt;
+  if (miga.seekT>0){ miga.seekT-=dt; if (miga.seekT<=0) miga.seek=null; }
+  if (miga.hintT<=0){
+    miga.hintT=12;
+    let best=null, bd=14;
+    for (const e of ents) if (e.type==='res' && resAvailable(e) && !S.heard.includes(e.res)){ const d=dist(e.x,e.y,S.p.x,S.p.y); if (d<bd && d>2){ bd=d; best=e; } }
+    if (best){ miga.seek=best; miga.seekT=3.5; }
+  }
+  const tx = miga.seek ? miga.seek.x : S.p.x + Math.cos(now*1.3)*.9;
+  const ty = miga.seek ? miga.seek.y-.6 : S.p.y - 1.1 + Math.sin(now*2.1)*.35;
+  miga.x = lerp(miga.x, tx, Math.min(1,dt*(miga.seek?1.2:2.5)));
+  miga.y = lerp(miga.y, ty, Math.min(1,dt*(miga.seek?1.2:2.5)));
+}
+
+/* ================================================================
+   RENDER
+   ================================================================ */
+function darkness(t){
+  t = t===undefined ? (S?S.time:.5) : t;
+  return clamp((Math.cos(2*Math.PI*t)*.5+.5)*1.6-.35,0,1);
+}
+const clouds = Array.from({length:14},(_,i)=>({x:hash(i,1,200)*3000-500, y:hash(i,2,200)*2600-300, r:120+hash(i,3,200)*220, s:6+hash(i,4,200)*10}));
+const fireflies = Array.from({length:40},(_,i)=>({x:20+hash(i,1,300)*48, y:12+hash(i,2,300)*36, p:hash(i,3,300)*6.28}));
+let cam={x:30,y:30};
+function render(){
+  const w=VW, h=VH, s=TS/T, dk=darkness();
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  // cielo y mar de nubes
+  const top = mixCol([126,166,201],[16,13,32],dk), bot=mixCol([236,212,178],[44,33,66],dk);
+  const sky=ctx.createLinearGradient(0,0,0,h); sky.addColorStop(0,top); sky.addColorStop(1,bot);
+  ctx.fillStyle=sky; ctx.fillRect(0,0,w,h);
+  for (const c of clouds){
+    const cx=((c.x - cam.x*TS*.35 + now*c.s) % (w+800) + w+800) % (w+800) - 400;
+    const cy=((c.y - cam.y*TS*.35) % (h+700) + h+700) % (h+700) - 350;
+    ctx.fillStyle=`rgba(${dk>.5?'90,80,130':'255,250,245'},${.35-dk*.15})`;
+    ell(ctx,cx,cy,c.r,c.r*.42); ell(ctx,cx+c.r*.5,cy+10,c.r*.6,c.r*.3); ell(ctx,cx-c.r*.5,cy+12,c.r*.55,c.r*.28);
+  }
+  let sx=0, sy=0; if (shake>0){ sx=(Math.random()-.5)*8*shake; sy=(Math.random()-.5)*8*shake; }
+  const ox=w/2-cam.x*TS+sx, oy=h/2-cam.y*TS+sy;
+  ctx.setTransform(dpr*s,0,0,dpr*s,dpr*ox,dpr*oy);
+  ctx.imageSmoothingEnabled=true;
+  ctx.drawImage(ground,0,0);
+  const x0=Math.max(0,Math.floor(-ox/TS)-2), y0=Math.max(0,Math.floor(-oy/TS)-2), x1=Math.min(W,Math.ceil((w-ox)/TS)+2), y1=Math.min(H,Math.ceil((h-oy)/TS)+3);
+  // agua animada
+  ctx.strokeStyle='rgba(220,240,245,.28)'; ctx.lineWidth=1.4;
+  for (let y=y0;y<y1;y++) for (let x=x0;x<x1;x++){
+    const t=tiles[idx(x,y)];
+    if (t!==WATER) continue;
+    const ph=now*(x>=60?1.6:.8)+hash(x,y,5)*6.28, px=x*T, py=y*T;
+    const yy=py+8+((Math.sin(ph)*.5+.5)*14);
+    ctx.beginPath(); ctx.moveTo(px+4+(x>=60?(now*20)%10:0),yy); ctx.quadraticCurveTo(px+T/2,yy-3,px+T-6,yy); ctx.stroke();
+  }
+  // huellas en modo escucha
+  if (S && S.listening){
+    for (const f of prints){
+      if (f.set==='gate' && !S.heard.includes('gateSteps') && dist(S.p.x,S.p.y,f.x,f.y)>3.5) continue;
+      if (f.x<x0||f.x>x1||f.y<y0||f.y>y1) continue;
+      const wave=SET.reduce? .7 : .35+.65*Math.max(0,Math.sin(now*3 - f.k*.45));
+      ctx.save(); ctx.translate(f.x*T,f.y*T); ctx.rotate(f.ang+Math.PI/2); ctx.globalAlpha=wave*.85; ctx.fillStyle=f.col;
+      ell(ctx,0,0,2.6,4.6); ell(ctx,0,-5.5,2,1.8); ctx.restore();
+    }
+    ctx.globalAlpha=1;
+  }
+  // lista de dibujables ordenada por y
+  const dl=[];
+  for (const tr of trees) if (tr.x>x0-1&&tr.x<x1+1&&tr.y>y0-1&&tr.y<y1+2) dl.push({y:tr.y, f:()=>{
+    const behind = S && S.p.y<tr.y && S.p.y>tr.y-2.2*tr.s && Math.abs(S.p.x-tr.x)<1.1*tr.s;
+    drawTree(ctx,tr,behind?.45:1); }});
+  for (const hu of huts) dl.push({y:hu.ty+2, f:()=>drawHut(ctx,hu)});
+  for (const e of ents){
+    if (e.x<x0-3||e.x>x1+3||e.y<y0-3||e.y>y1+4) continue;
+    dl.push({y:e.y, f:()=>drawEnt(e)});
+  }
+  if (S && mode!=='title'){
+    dl.push({y:S.p.y, f:()=>{ drawHuman(ctx,S.p.x*T,S.p.y*T,CAST.nilo,S.p.face,now,pMoving,S.crouch); if (S.listening){ ctx.fillStyle='rgba(149,220,234,.9)'; ell(ctx,S.p.x*T,S.p.y*T-14*(S.crouch?.78:1),2.2,2.2); } }});
+    if (F('miga')) dl.push({y:miga.y+1.2, f:()=>drawMiga(ctx,miga.x*T,miga.y*T,now)});
+  }
+  dl.sort((a,b)=>a.y-b.y);
+  for (const d of dl) d.f();
+
+  // luciérnagas de noche
+  if (dk>.4){
+    ctx.fillStyle='#f6f0a0';
+    for (const f of fireflies){
+      const fx=f.x+Math.sin(now*.4+f.p)*1.5, fy=f.y+Math.cos(now*.33+f.p*2)*1.2;
+      ctx.globalAlpha=(dk-.4)*1.6*(.5+.5*Math.sin(now*3+f.p*4)); ell(ctx,fx*T,fy*T,1.6,1.6);
+    }
+    ctx.globalAlpha=1;
+  }
+  // fogatas: brillo aditivo
+  ctx.globalCompositeOperation='lighter';
+  for (const e of ents) if (e.type==='fire'){ const g=ctx.createRadialGradient(e.x*T,e.y*T,2,e.x*T,e.y*T,60); g.addColorStop(0,`rgba(255,170,80,${.18+dk*.2})`); g.addColorStop(1,'rgba(255,120,40,0)'); ctx.fillStyle=g; ctx.fillRect(e.x*T-60,e.y*T-60,120,120); }
+  ctx.globalCompositeOperation='source-over';
+
+  // noche: luz y sombra
+  if (dk>0.02){
+    lctx.setTransform(1,0,0,1,0,0);
+    lctx.globalCompositeOperation='source-over';
+    lctx.clearRect(0,0,light.width,light.height);
+    lctx.fillStyle=`rgba(12,10,34,${.72*dk})`; lctx.fillRect(0,0,light.width,light.height);
+    lctx.globalCompositeOperation='destination-out';
+    const L=(x,y,r,a=1)=>{ const X=(x*TS+ox)*dpr, Y=(y*TS+oy)*dpr, R=r*TS*dpr; if (X<-R||Y<-R||X>light.width+R||Y>light.height+R) return; const g=lctx.createRadialGradient(X,Y,0,X,Y,R); g.addColorStop(0,`rgba(0,0,0,${a})`); g.addColorStop(1,'rgba(0,0,0,0)'); lctx.fillStyle=g; lctx.fillRect(X-R,Y-R,R*2,R*2); };
+    if (S && mode!=='title') L(S.p.x,S.p.y-.4,3.4,.85);
+    for (const e of ents){
+      if (e.type==='fire') L(e.x,e.y,4.8+Math.sin(now*9)*.15,1);
+      else if (e.type==='lamp') L(e.x,e.y-.6,2.8,.9);
+      else if (e.type==='capsule') L(e.x,e.y-e.r*.5,e.r*2.2,.7);
+      else if (e.type==='flower' && !F('pick_'+e.id)) L(e.x,e.y,1.4,.8);
+      else if (e.type==='npc' && e.id==='oru') L(e.x+.6,e.y-1.9,1.6,.8);
+    }
+    for (const h of huts) L(h.tx+1,h.ty+1.6,1.6,.5);
+    ctx.setTransform(1,0,0,1,0,0);
+    ctx.drawImage(light,0,0);
+  }
+  // modo escucha: velo y anillos
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  if (S && S.listening && mode!=='title'){
+    ctx.fillStyle='rgba(40,60,120,.22)'; ctx.fillRect(0,0,w,h);
+    const px=S.p.x*TS+ox, py=(S.p.y-.4)*TS+oy;
+    ctx.strokeStyle='rgba(149,220,234,.5)'; ctx.lineWidth=1.5;
+    const n = SET.reduce?1:3;
+    for (let i=0;i<n;i++){ const ph=SET.reduce?.5:((now*.5+i/3)%1); ctx.globalAlpha=1-ph; ctx.beginPath(); ctx.arc(px,py,ph*TS*6,0,7); ctx.stroke(); }
+    ctx.globalAlpha=1;
+  }
+  // resonancias (encima de la noche para que se lean)
+  ctx.setTransform(dpr*s,0,0,dpr*s,dpr*ox,dpr*oy);
+  if (S && has('amulet')){
+    ctx.globalCompositeOperation='lighter';
+    for (const e of ents){
+      if (e.type!=='res' || !resAvailable(e)) continue;
+      if (e.x<x0-2||e.x>x1+2||e.y<y0-2||e.y>y1+2) continue;
+      const heard=S.heard.includes(e.res), x=e.x*T, y=e.y*T;
+      if (S.listening){
+        const pulse = SET.reduce?.6:.5+.5*Math.sin(now*3+e.x);
+        const R = heard?16:26+pulse*8;
+        const g=ctx.createRadialGradient(x,y-6,0,x,y-6,R); g.addColorStop(0,`rgba(149,220,234,${heard?.35:.75})`); g.addColorStop(1,'rgba(149,220,234,0)');
+        ctx.fillStyle=g; ctx.fillRect(x-R,y-6-R,R*2,R*2);
+        ctx.strokeStyle=`rgba(200,245,255,${heard?.3:.8})`; ctx.lineWidth=1.2; ctx.beginPath(); ctx.ellipse(x,y,12+pulse*4,5+pulse*1.5,0,0,7); ctx.stroke();
+      } else if (!heard){
+        for (let i=0;i<3;i++){ const ph=((now*.5+i/3+hash(e.x|0,e.y|0,1))%1); ctx.fillStyle=`rgba(170,230,240,${(1-ph)*.55})`; ell(ctx,x+Math.sin(ph*6+i*2)*6,y-ph*26,1.6,1.6); }
+      }
+    }
+    ctx.globalCompositeOperation='source-over';
+  }
+  // viñeta
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  const vg=ctx.createRadialGradient(w/2,h/2,Math.min(w,h)*.35,w/2,h/2,Math.max(w,h)*.75);
+  vg.addColorStop(0,'rgba(10,8,20,0)'); vg.addColorStop(1,'rgba(10,8,20,.45)');
+  ctx.fillStyle=vg; ctx.fillRect(0,0,w,h);
+}
+function mixCol(a,b,t){ return `rgb(${Math.round(lerp(a[0],b[0],t))},${Math.round(lerp(a[1],b[1],t))},${Math.round(lerp(a[2],b[2],t))})`; }
+
+function drawEnt(e){
+  const x=e.x*T, y=e.y*T;
+  switch(e.type){
+    case 'npc': {
+      const p=CAST[e.who];
+      if (p.kind==='human') drawHuman(ctx,x,y,p,e.face||'down',now,e.moving,false);
+      else drawKolo(ctx,x,y,p,e.face||'down',now,e.moving);
+      if (e.id==='boro' && isNight() && !e.moving){ /* duerme junto al fuego */ }
+      break;
+    }
+    case 'capsule': drawCapsule(ctx,e); break;
+    case 'musgo': drawMusgo(ctx,e,now); break;
+    case 'vid': drawVid(ctx,e,now); break;
+    case 'fire': {
+      ctx.fillStyle='#4a3020'; for (let i=0;i<3;i++){ ctx.save(); ctx.translate(x,y); ctx.rotate(i*1.05); ctx.fillRect(-11,-2,22,4); ctx.restore(); }
+      const fl=SET.reduce?1:1+Math.sin(now*14)*.12;
+      ctx.fillStyle='#e8642e'; ctx.beginPath(); ctx.moveTo(x-7,y); ctx.quadraticCurveTo(x,y-22*fl,x+7,y); ctx.fill();
+      ctx.fillStyle='#f6c860'; ctx.beginPath(); ctx.moveTo(x-4,y); ctx.quadraticCurveTo(x,y-13*fl,x+4,y); ctx.fill();
+      ctx.fillStyle='#5a5560'; for (let i=0;i<8;i++) ell(ctx,x+Math.cos(i*.8)*12,y+Math.sin(i*.8)*5,3,2.2);
+      break;
+    }
+    case 'deadfire': ctx.fillStyle='#3a2a20'; for (let i=0;i<3;i++){ ctx.save(); ctx.translate(x,y); ctx.rotate(i*1.05); ctx.fillRect(-10,-2,20,4); ctx.restore(); } ctx.fillStyle='#5a5560'; for (let i=0;i<8;i++) ell(ctx,x+Math.cos(i*.8)*11,y+Math.sin(i*.8)*4.5,3,2); break;
+    case 'tent': {
+      ctx.fillStyle='rgba(0,0,0,.25)'; ell(ctx,x+4,y+2,26,6);
+      ctx.fillStyle='#a88f6a'; ctx.beginPath(); ctx.moveTo(x-24,y); ctx.lineTo(x,y-30); ctx.lineTo(x+24,y); ctx.closePath(); ctx.fill();
+      ctx.fillStyle='#7d6648'; ctx.beginPath(); ctx.moveTo(x-4,y); ctx.lineTo(x,y-30); ctx.lineTo(x+10,y); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle='#5a4330'; ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(x+6,y-12); ctx.lineTo(x+16,y-20); ctx.lineTo(x+14,y-6); ctx.stroke();
+      break;
+    }
+    case 'arch': {
+      const L=30.5*T, R=33.5*T, by=34.9*T;
+      ctx.fillStyle='#8d8590';
+      ctx.fillRect(L-12,by-56,24,56); ctx.fillRect(R-12,by-56,24,56);
+      ctx.fillStyle='#a49ca6'; ctx.fillRect(L-14,by-62,28,8); ctx.fillRect(R-14,by-62,28,8);
+      ctx.strokeStyle='#8d8590'; ctx.lineWidth=14; ctx.beginPath(); ctx.arc((L+R)/2,by-60,(R-L)/2,Math.PI,Math.PI*1.72); ctx.stroke();
+      ctx.fillStyle='#5f8a44'; for (let i=0;i<6;i++) ell(ctx,L-8+i*4,by-58+i*9,4,2.5,i);
+      ctx.fillStyle='rgba(0,0,0,.18)'; ctx.fillRect(L-12,by-8,24,8); ctx.fillRect(R-12,by-8,24,8);
+      break;
+    }
+    case 'altar': ctx.fillStyle='#7c7480'; rr(ctx,x-14,y-14,28,16,3); ctx.fillStyle='#958d98'; ctx.fillRect(x-16,y-17,32,5);
+      ctx.strokeStyle='#4e4652'; ctx.lineWidth=1.2; ctx.beginPath(); ctx.arc(x-6,y-6,3,0,7); ctx.moveTo(x+3,y-6); ctx.arc(x+3,y-6,1,0,7); ctx.stroke();
+      if (F('noteLeft')){ ctx.fillStyle='#efe3c8'; ctx.fillRect(x+3,y-21,9,6); }
+      break;
+    case 'item': {
+      if (F('got_'+e.id)) break;
+      const tw=SET.reduce?.7:.5+.5*Math.sin(now*4+e.x*3);
+      ctx.fillStyle=`rgba(255,240,200,${.4+tw*.6})`;
+      ctx.save(); ctx.translate(x,y-3); ctx.rotate(Math.PI/4); ctx.fillRect(-2,-2,4,4); ctx.restore();
+      ctx.strokeStyle=`rgba(255,240,200,${tw*.7})`; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(x-7,y-3); ctx.lineTo(x+7,y-3); ctx.moveTo(x,y-10); ctx.lineTo(x,y+4); ctx.stroke();
+      if (e.item==='notebook'){ ctx.fillStyle='#6b4a2e'; ctx.fillRect(x-6,y-2,12,8); ctx.fillStyle='#e9dcc0'; ctx.fillRect(x-5,y-1,10,1.5); }
+      break;
+    }
+    case 'res': {
+      if (e.scarf){ ctx.fillStyle='#4f7aa8'; ctx.save(); ctx.translate(x,y); ctx.rotate(.3); rr(ctx,-10,-2,20,5,2); ctx.restore(); ctx.fillStyle='#3d6088'; ctx.fillRect(x+6,y+1,3,6); }
+      if (e.pile){ ctx.fillStyle='#1e1a24'; for (let i=0;i<9;i++){ ctx.save(); ctx.translate(x+(hash(i,1,4)-.5)*22,y-(hash(i,2,4))*6); ctx.rotate(hash(i,3,4)*3); ctx.fillRect(-4,-3,8,6); ctx.restore(); } }
+      break;
+    }
+    case 'flower': {
+      if (F('pick_'+e.id)){ ctx.fillStyle='#3f6b33'; ell(ctx,x,y-2,4,2); break; }
+      ctx.strokeStyle='#3f6b33'; ctx.lineWidth=1.6; ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x,y-10); ctx.stroke();
+      if (isNight()){
+        for (let i=0;i<5;i++){ ctx.fillStyle='#cfe9ff'; ell(ctx,x+Math.cos(i*1.256)*4,y-12+Math.sin(i*1.256)*4,3,2,i*1.256); }
+        ctx.fillStyle='#fff7c8'; ell(ctx,x,y-12,2,2);
+      } else { ctx.fillStyle='#8aa6c0'; ell(ctx,x,y-12,2.5,4); }
+      break;
+    }
+    case 'sign': ctx.fillStyle='#6b4a2e'; ctx.fillRect(x-2,y-22,4,22); ctx.fillStyle='#8a6440'; ctx.beginPath(); ctx.moveTo(x-12,y-24); ctx.lineTo(x+12,y-24); ctx.lineTo(x+17,y-19); ctx.lineTo(x+12,y-14); ctx.lineTo(x-12,y-14); ctx.closePath(); ctx.fill(); break;
+    case 'lamp': ctx.fillStyle='#4e3f52'; ctx.fillRect(x-2,y-30,4,30); ctx.fillStyle='#f5d58c'; ell(ctx,x,y-33,5,6); ctx.fillStyle='rgba(245,213,140,.25)'; ell(ctx,x,y-33,11,11); break;
+    case 'citygate': {
+      const gx=86*T, gy=11*T;
+      ctx.fillStyle='#cdbb98'; ctx.fillRect(gx-2.2*T,gy-3*T,1.2*T,3*T); ctx.fillRect(gx+1*T,gy-3*T,1.2*T,3*T);
+      ctx.fillStyle='#b8a684'; ctx.fillRect(gx-2.4*T,gy-3.4*T,4.8*T,.6*T);
+      ctx.fillStyle='#2b2236'; ctx.beginPath(); ctx.moveTo(gx-T,gy); ctx.lineTo(gx-T,gy-1.8*T); ctx.arc(gx,gy-1.8*T,T,Math.PI,0); ctx.lineTo(gx+T,gy); ctx.closePath(); ctx.fill();
+      ctx.fillStyle='#e6c66a'; ell(ctx,gx,gy-3.1*T,6,6);
+      break;
+    }
+  }
+}
+
+/* ================================================================
+   HUD
+   ================================================================ */
+let hudT=0;
+function updateHUD(){
+  hudT-=1; if (hudT>0) return; hudT=10;
+  if (!S) return;
+  const hrs = (S.time*24), hh=Math.floor(hrs), mm=Math.floor((hrs-hh)*60/10)*10;
+  const part = isNight()?'Noche':(hh<12?'Mañana':(hh<19?'Tarde':'Anochecer'));
+  $('clock').textContent = `${part} · ${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}`;
+  const cue=$('resCue');
+  if (SET.cues && mode==='play' && has('amulet')){
+    let best=null, bd=7;
+    for (const e of ents) if (e.type==='res' && resAvailable(e) && !S.heard.includes(e.res)){ const d=dist(e.x,e.y,S.p.x,S.p.y); if (d<bd){ bd=d; best=e; } }
+    if (best && bd>1.5){
+      const a=Math.atan2(best.y-S.p.y,best.x-S.p.x); const arrows=['→','↘','↓','↙','←','↖','↑','↗'];
+      cue.textContent = `${arrows[((Math.round(a/(Math.PI/4))%8)+8)%8]}  resonancia cercana`; cue.classList.remove('hidden');
+    } else cue.classList.add('hidden');
+  } else cue.classList.add('hidden');
+}
+
+/* ================================================================
+   CUADERNO
+   ================================================================ */
+let nbTab='mist';
+const TABS=[['mist','Misterios'],['res','Resonancias'],['chars','Personajes'],['beasts','Bestiario'],['items','Objetos'],['atlas','Atlas']];
+function openNotebook(tab){
+  if (!S) return;
+  if (tab) nbTab=tab;
+  mode='notebook'; keys.clear(); hidePrompt();
+  $('notebook').classList.remove('hidden'); renderNotebook();
+}
+function closeNotebook(){ $('notebook').classList.add('hidden'); mode='play'; updateObjective(); save(); }
+$('nbClose').addEventListener('click', closeNotebook);
+$('bNote').addEventListener('click', ()=>{ if (mode==='play') openNotebook(); });
+function esc(s){ return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function renderNotebook(){
+  const tabs=$('nbTabs'); tabs.innerHTML='';
+  const counts={res:S.heard.length+'/'+RES_ORDER.length, chars:S.chars.length, beasts:S.beasts.length, items:S.inv.length};
+  for (const [id,name] of TABS){
+    const b=document.createElement('button'); b.type='button'; b.className='tab'+(nbTab===id?' on':'');
+    b.innerHTML=esc(name)+(counts[id]!==undefined?`<span class="count">${counts[id]}</span>`:'');
+    b.addEventListener('click',()=>{ nbTab=id; renderNotebook(); }); tabs.appendChild(b);
+  }
+  const body=$('nbBody'); let h='';
+  if (nbTab==='mist'){
+    h+='<div class="entries">';
+    h+=`<div class="entry"><div class="meta">Misterio principal</div><h3>¿Qué les pasó a Eira y Daren?</h3><p>${esc(objectiveText())}</p>`;
+    h+='<p class="fine"><span class="know">● Sabes</span> &nbsp; <span class="suspect">● Sospechas</span></p>';
+    const know=[], sus=[];
+    if (has('letter')) know.push('Se fueron a estudiar las Cápsulas y dejaron una carta y el amuleto.');
+    if (S.heard.includes('gateSteps')) know.push('No salieron por la Puerta del Reverso, sino por el pasaje de raíces.');
+    if (S.heard.includes('houseNight')) sus.push('Papá quería mantenerte al margen. Mamá quería contártelo todo.');
+    if (F('mysterySolved')) know.push('Eira fue por voluntad propia hacia la Ciudad; Daren la siguió. El registro de la Cápsula fue alterado.');
+    else if (F('campNotebook')) sus.push('Mamá quería ver «el Archivo» con sus propios ojos.');
+    if (S.heard.includes('archive')) know.push('Huyeron hacia el Umbral Dormido para detener el plan del Primer Custodio.');
+    h+= know.map(t=>`<p class="know">● <span style="color:var(--parch)">${esc(t)}</span></p>`).join('') + sus.map(t=>`<p class="suspect">● <span style="color:var(--parch)">${esc(t)}</span></p>`).join('');
+    h+='</div>';
+    if (F('rootsOpen')){
+      h+=`<div class="entry"><div class="meta">Investigación · Prados que Recuerdan</div><h3>${esc(MYSTERY.q)}</h3>`;
+      h+='<div class="ev">'+MYSTERY.evidence.map(ev=>{ const ok=S.heard.includes(ev.id)||F(ev.id); return `<span class="${ok?'ok':'no'}">${ok?'●':'○'}</span><span style="color:${ok?'var(--parch)':'var(--parch-dim)'}">${ok?esc(ev.label):'Pista sin descubrir'}</span>`; }).join('')+'</div>';
+      if (F('mysterySolved')) h+='<p class="know">Resuelto. Madre Oru te espera en las puertas de la Ciudad.</p>';
+      else if (evidenceCount()<MYSTERY.need) h+=`<p class="empty">Necesitas al menos ${MYSTERY.need} pistas para formular una hipótesis (${evidenceCount()}/${MYSTERY.need}).</p>`;
+      else {
+        h+='<p>Elige la explicación que mejor encaja con lo que sabes. Si te equivocas, nada se pierde: el cuaderno te dirá qué pieza no encaja.</p><div class="hyp">';
+        MYSTERY.options.forEach(o=>{ h+=`<button type="button" data-hyp="${o.id}" class="${S.tried.includes(o.id)?'wrongt':''}">${esc(o.text)}</button>`; });
+        h+='</div><div id="hypMsg"></div>';
+      }
+      if (!F('mysterySolved')){
+        h+=`<div style="margin-top:10px">${S.hints>0?MYSTERY.hints.slice(0,S.hints).map((t,i)=>`<p class="quote">Pista ${i+1}: ${esc(t)}</p>`).join(''):''}`;
+        if (S.hints<MYSTERY.hints.length) h+=`<button class="small-btn" type="button" id="hintBtn">Mostrar una pista (${S.hints}/${MYSTERY.hints.length})</button>`;
+        h+='</div>';
+      }
+      h+='</div>';
+    }
+    if (F('metBoro')){
+      const n=['button','key','bell'].filter(i=>F('col_'+i)).length;
+      h+=`<div class="entry"><div class="meta">Historia secundaria</div><h3>La colección de Boro</h3><p>${F('boroGiftDone')?'Colección completa.':`Boro busca un botón de cerámica, una llave sin cerradura y una campanilla rajada. Entregados: ${n}/3.`}</p>`;
+      if (F('boroConsent')&&!S.heard.includes('boroCapsule')) h+='<p class="suspect">● Boro te ha dado permiso para escuchar su Cápsula sellada.</p>';
+      h+='</div>';
+    }
+    if (F('knowMusgo')||S.flags.pushes){
+      h+=`<div class="entry"><div class="meta">Obstáculo</div><h3>El musgoso del puente</h3><p>${F('musgoCalm')?'Calmado con la flor de eco. Ahora duerme en la orilla.':F('crossed')?'Pasaste a su lado sin despertarlo.':'Bloquea el puente del este. Se asusta con los pasos.'}</p>`;
+      if (!F('musgoCalm')&&!F('crossed')&&F('knowMusgo')) h+='<p class="suspect">● Dos caminos posibles: la flor de eco (de noche, junto al lago) o pasar agachado mientras duerme.</p>';
+      h+='</div>';
+    }
+    if (S.flags.cloud) h+=`<div class="entry"><div class="meta">Asuntos absurdos</div><h3>La nube de Pim y Tolo</h3><p>${S.flags.cloud==='libre'?'Decidiste que no tuviera nombre.':'Se llama «'+esc(S.flags.cloud)+'».'}</p></div>`;
+    h+='</div>';
+  }
+  else if (nbTab==='res'){
+    const list=RES_ORDER.filter(id=>S.heard.includes(id));
+    if (!list.length) h='<p class="empty">Aún no has escuchado ninguna Resonancia. Cuando el amuleto vibre, pulsa Q para escuchar y E frente al recuerdo.</p>';
+    else h='<div class="entries">'+list.map(id=>{ const r=RES[id]; return `<div class="entry"><div class="meta"><span class="tag t-${r.type}">${r.type}</span>${esc(r.place)}</div><p>${esc(r.summary)}</p>${r.lines.map(([w,t])=>`<p class="quote">${w&&CAST[w]?esc(CAST[w].name)+': ':''}${esc(t)}</p>`).join('')}</div>`; }).join('')+'</div>';
+    h+=`<p class="fine" style="margin-top:12px">Las Resonancias son fragmentos, no verdades completas: pueden mentir, equivocarse o mostrar solo una perspectiva.</p>`;
+  }
+  else if (nbTab==='chars'){
+    h = S.chars.length ? '<div class="entries">'+S.chars.map(c=>{ const d=CHARS[c]; return `<div class="entry"><div class="meta">${esc(d.role)}</div><h3>${esc(d.name)}</h3><p>${esc(d.text)}</p></div>`; }).join('')+'</div>' : '<p class="empty">Habla con la gente para conocerla.</p>';
+  }
+  else if (nbTab==='beasts'){
+    h = S.beasts.length ? '<div class="entries">'+S.beasts.map(b=>`<div class="entry"><h3>${esc(BEASTS[b].name)}</h3><p>${esc(BEASTS[b].text)}</p></div>`).join('')+'</div>' : '<p class="empty">Observa a las criaturas. Agacharse (C) ayuda a acercarse sin asustarlas.</p>';
+  }
+  else if (nbTab==='items'){
+    h = S.inv.length ? '<div class="entries">'+S.inv.map(i=>`<div class="entry"><h3>${esc(ITEMS[i].name)}</h3><p>${esc(ITEMS[i].desc)}</p></div>`).join('')+'</div>' : '<p class="empty">No llevas nada encima.</p>';
+  }
+  else if (nbTab==='atlas'){
+    h='<div id="atlasWrap"><canvas id="atlas" width="576" height="432"></canvas></div><div class="legend"><span style="color:var(--amber)">● Nilo</span><span style="color:var(--res)">● Resonancia sin escuchar</span><span>Mapa de Orom · Capítulo I. Escala aproximada: el mundo jugable entero mide unos 64 km².</span></div>';
+  }
+  body.innerHTML=h;
+  body.querySelectorAll('[data-hyp]').forEach(b=>b.addEventListener('click',()=>tryHypothesis(b.dataset.hyp)));
+  const hb=$('hintBtn'); if (hb) hb.addEventListener('click',()=>{ S.hints++; renderNotebook(); });
+  if (nbTab==='atlas') drawAtlas();
+}
+function tryHypothesis(id){
+  const o=MYSTERY.options.find(x=>x.id===id);
+  if (id==='truth'){
+    setF('mysterySolved'); Snd.chime(784,1.8);
+    toast('<b>Hipótesis confirmada.</b> Ahora sabes lo que pasó en el campamento.');
+    renderNotebook();
+    const m=$('hypMsg'); if (m) m.innerHTML='';
+  } else {
+    if (!S.tried.includes(id)) S.tried.push(id);
+    renderNotebook();
+    const m=$('hypMsg'); if (m) m.innerHTML=`<p class="quote" style="border-color:var(--rose)">Algo no encaja. ${esc(o.wrong)}</p>`;
+  }
+}
+const ATLAS_COL={[GRASS]:'#5d7f45',[FLOW]:'#6b8a52',[WATER]:'#3b7d9a',[ROCK]:'#5a5160',[PATH]:'#b59a6c',[DIRT]:'#8b6b4b',[BRIDGE]:'#8a6440',[STONE]:'#c9b99a',[ROOTS]:'#4a3a2c',[GATE]:'#7d5835',[RED]:'#b0603e',[SAND]:'#d5bf8e'};
+function drawAtlas(){
+  const c=$('atlas').getContext('2d'), k=6;
+  c.fillStyle='#e9dcc0'; c.fillRect(0,0,576,432);
+  for (let y=0;y<H;y++) for (let x=0;x<W;x++){
+    const t=tiles[idx(x,y)]; if (t===VOID) continue;
+    if (!S.explored[idx(x,y)]){ c.fillStyle='#cdbf9f'; c.fillRect(x*k,y*k,k,k); continue; }
+    c.fillStyle=ATLAS_COL[t]||'#777'; c.fillRect(x*k,y*k,k,k);
+    if (block[idx(x,y)] && (t===GRASS||t===FLOW||t===DIRT||t===STONE)){ c.fillStyle='rgba(30,50,25,.55)'; c.fillRect(x*k+1,y*k+1,k-2,k-2); }
+  }
+  c.font='600 12px "Caudex", Georgia, serif'; c.fillStyle='#3a2a1c'; c.textAlign='center';
+  const lab=(t,x,y)=>{ if (S.explored[idx(Math.floor(x),Math.floor(y))]) c.fillText(t,x*k,y*k); };
+  lab('Tribu del Reverso',16,66); lab('Prados que Recuerdan',40,44); lab('Ciudad de las Mil Cápsulas',85,44); lab('Bosque del Revés',36,6); lab('Gargantas Silentes',54,62);
+  c.fillStyle='#4b3b60'; c.fillText('↑ Umbral Dormido',60,3*k); c.fillText('Mar de las Cosas No Vividas →',80,4*k);
+  for (const e of ents) if (e.type==='res' && resAvailable(e) && !S.heard.includes(e.res) && S.explored[idx(Math.floor(e.x),Math.floor(e.y))]){ c.fillStyle='#2f8fa6'; c.beginPath(); c.arc(e.x*k,e.y*k,3,0,7); c.fill(); }
+  c.fillStyle='#c46a1e'; c.beginPath(); c.arc(S.p.x*k,S.p.y*k,5,0,7); c.fill(); c.strokeStyle='#fff'; c.lineWidth=1.5; c.stroke();
+}
+
+/* ================================================================
+   MENÚS, AJUSTES, FINAL
+   ================================================================ */
+function openMenu(){ mode='menu'; keys.clear(); hidePrompt(); $('menu').classList.remove('hidden'); setTimeout(()=>$('mResume').focus(),20); }
+function closeMenu(){ $('menu').classList.add('hidden'); mode='play'; }
+$('bMenu').addEventListener('click', ()=>{ if (mode==='play') openMenu(); });
+$('mResume').addEventListener('click', closeMenu);
+$('mNote').addEventListener('click', ()=>{ $('menu').classList.add('hidden'); mode='play'; openNotebook(); });
+$('mControls').addEventListener('click', ()=>openSettings('controls','menu'));
+$('mSettings').addEventListener('click', ()=>openSettings('settings','menu'));
+$('mTitle').addEventListener('click', ()=>{ save(); $('menu').classList.add('hidden'); toTitle(); });
+
+let setReturn='title';
+function openSettings(kind, ret){
+  setReturn=ret; const prev=mode; mode='settings';
+  $('menu').classList.add('hidden'); $('title').classList.add('hidden');
+  $('settings').classList.remove('hidden');
+  renderSettings(kind);
+}
+function closeSettings(){
+  $('settings').classList.add('hidden');
+  if (setReturn==='menu'){ mode='menu'; $('menu').classList.remove('hidden'); }
+  else { mode='title'; $('title').classList.remove('hidden'); }
+}
+$('setClose').addEventListener('click', closeSettings);
+function renderSettings(kind){
+  const b=$('setBody');
+  if (kind==='controls'){
+    $('setTitle').textContent='Controles';
+    b.innerHTML=`<div class="keys">
+      <kbd>WASD / flechas</kbd><span>Moverse</span>
+      <kbd>Mayús</kbd><span>Correr (mantener)</span>
+      <kbd>C</kbd><span>Agacharse: más lento y silencioso</span>
+      <kbd>E · Espacio</kbd><span>Interactuar, avanzar diálogos</span>
+      <kbd>1 – 4</kbd><span>Elegir respuesta</span>
+      <kbd>Q</kbd><span>Escucha de Resonancias (activar / desactivar)</span>
+      <kbd>Tab · N</kbd><span>Cuaderno de campo</span>
+      <kbd>M</kbd><span>Atlas</span>
+      <kbd>Esc</kbd><span>Pausa</span>
+    </div>
+    <p class="fine" style="margin-top:14px">En pantallas táctiles: arrastra en la mitad izquierda para moverte y usa los botones de la derecha.</p>
+    <p class="fine">No hay combate. Si algo te asusta, observa, espera, agáchate o busca otro camino.</p>`;
+    return;
+  }
+  $('setTitle').textContent='Ajustes y accesibilidad';
+  const seg=(id,opts,val)=>`<div class="seg" data-set="${id}">${opts.map((o,i)=>`<button type="button" data-v="${o[1]}" class="${String(val)===String(o[1])?'on':''}">${o[0]}</button>`).join('')}</div>`;
+  b.innerHTML=`
+    <div class="setrow"><label>Tamaño del texto</label>${seg('text',[['Normal',0],['Grande',1],['Muy grande',2]],SET.text)}</div>
+    <div class="setrow"><label>Reducir movimiento<br><span class="fine">Sin temblores de cámara ni texto animado</span></label>${seg('reduce',[['No',false],['Sí',true]],SET.reduce)}</div>
+    <div class="setrow"><label>Sonido</label>${seg('sound',[['Activado',true],['Silencio',false]],SET.sound)}</div>
+    <div class="setrow"><label>Señales sonoras en pantalla<br><span class="fine">Indica la dirección de las Resonancias cercanas</span></label>${seg('cues',[['Sí',true],['No',false]],SET.cues)}</div>
+    <div class="setrow"><label>Alto contraste en paneles</label>${seg('contrast',[['No',false],['Sí',true]],SET.contrast)}</div>
+    <p class="fine" style="margin-top:12px">Los misterios tienen pistas graduales opcionales en el cuaderno. Los diálogos se pueden leer al ritmo que quieras.</p>`;
+  b.querySelectorAll('.seg').forEach(sg=>sg.querySelectorAll('button').forEach(btn=>btn.addEventListener('click',()=>{
+    const k=sg.dataset.set, v=btn.dataset.v; SET[k] = (v==='true')?true:(v==='false')?false:Number(v);
+    saveSettings(); renderSettings('settings');
+  })));
+}
+
+function showEnding(){
+  mode='ending'; hidePrompt();
+  const L=[];
+  L.push(['Teia', F('noteLeft') ? 'Encontró tu nota en el altar. Esta noche, el fuego comunal arde un poco más alto.' : 'Te buscó toda la noche. Mañana la Tribu discutirá si sellar también el pasaje de raíces.']);
+  if (F('boroTold')||F('boroRespected')) L.push(['Boro', F('boroRespected') ? 'Respetaste su Cápsula sin abrirla. Te regaló la horquilla de Eira y te considera un amigo.' : 'Le pediste permiso y le devolviste la verdad. Ahora recuerda a Eira, y no le pesa.']);
+  else if (F('boroInvaded')) L.push(['Boro', F('boroForgave') ? 'Forzaste su recuerdo. Te ha perdonado a medias.' : 'Forzaste su recuerdo sin permiso. Ya no te mira igual.']);
+  else L.push(['Boro', F('metBoro') ? 'Su colección sigue incompleta. Seguirá esperando junto al gran árbol.' : 'No llegaste a conocer al coleccionista del gran árbol.']);
+  L.push(['El musgoso', F('musgoCalm') ? 'Lo calmaste con la flor de eco. Ahora duerme tranquilo en la orilla.' : 'Pasaste a su lado mientras dormía. Sigue vigilando el puente, igual de asustado.']);
+  L.push(['La nube', S.flags.cloud ? (S.flags.cloud==='libre' ? 'Sigue sin nombre, cambiando de forma sobre los Prados.' : `Pim y Tolo la llaman «${S.flags.cloud}».`) : 'Pim y Tolo siguen discutiendo.']);
+  L.push(['Miga', F('miga') ? 'Viaja contigo, posada en tu bolsa.' : 'Una polilla de papel sigue dormida entre las láminas negras del arco.']);
+  L.push(['El fragmento de Eira', F('privateNow') ? 'Lo escuchaste en la Ciudad. «Te pido que elijas tú.»' : 'Lo guardas sin escuchar, para cuando la encuentres.']);
+  L.push(['Tu respuesta a Oru', {integracion:'Conectarlas todas. Integración.', ruptura:'Romperlas todas. Ruptura.', reverso:'Que nadie tenga autoridad sobre los recuerdos de otro. El reverso.'}[S.flags.philo]||'—']);
+  $('endLede').textContent='Eira y Daren siguen vivos, camino del Umbral Dormido. El Primer Custodio quiere conectar todas las Cápsulas en un solo sueño. Nilo ya no busca solo a sus padres.';
+  $('endList').innerHTML=L.map(([a,b])=>`<div><b>${esc(a)}</b>${esc(b)}</div>`).join('');
+  const m=Math.floor(S.played/60);
+  $('endStats').innerHTML=`<div><strong>${S.heard.length}/${RES_ORDER.length}</strong>Resonancias</div><div><strong>${S.chars.length}</strong>Personajes</div><div><strong>${S.beasts.length}</strong>Criaturas</div><div><strong>${m} min</strong>Jugados</div>`;
+  $('ending').classList.remove('hidden'); save();
+}
+$('eRoam').addEventListener('click', ()=>{ $('ending').classList.add('hidden'); mode='play'; updateObjective(); });
+$('eNew').addEventListener('click', ()=>{ $('ending').classList.add('hidden'); newGame(); });
+
+/* ================================================================
+   ARRANQUE
+   ================================================================ */
+function toTitle(){
+  mode='title';
+  $('hud').classList.add('hidden'); $('touch').classList.add('hidden'); hidePrompt(); $('resCue').classList.add('hidden');
+  $('title').classList.remove('hidden');
+  const sv=loadSave();
+  $('tContinue').disabled=!sv;
+  $('tContinueInfo').textContent = sv ? `${regionAt(sv.p.x,sv.p.y).name} · ${Math.floor(sv.played/60)} min` : 'No hay partida guardada';
+}
+function resetWorldEnts(){
+  for (const e of ents){
+    if (e.type==='npc'){ const r=e.home||(e.route&&e.route[0]); if (r){ e.x=r.x; e.y=r.y; } e.goal=null; e.wait=0; e.talking=false; }
+    if (e.type==='musgo'){ e.x=MUSGO_HOME.x; e.y=MUSGO_HOME.y; }
+    if (e.type==='vid'){ e.x=e.hx; e.y=e.hy; e.gx=e.hx; e.gy=e.hy; e.st='wander'; }
+  }
+}
+function newGame(){
+  resetWorldEnts();
+  S=newState(); lastRegion='';
+  $('title').classList.add('hidden');
+  try{ localStorage.removeItem(SAVE_KEY); }catch(e){}
+  startIntro();
+}
+function beginPlay(fresh){
+  mode='play';
+  $('hud').classList.remove('hidden');
+  if (isTouch){ $('touch').classList.remove('hidden'); document.body.classList.add('touch'); }
+  $('chipListen').classList.toggle('on',S.listening); $('chipCrouch').classList.toggle('on',S.crouch);
+  $('tbCrouch').classList.toggle('on',S.crouch); $('tbListen').classList.toggle('on',S.listening);
+  cam.x=S.p.x; cam.y=S.p.y-.5;
+  if (F('miga')){ miga.x=S.p.x; miga.y=S.p.y-1; }
+  updateObjective();
+  const rg=regionAt(S.p.x,S.p.y); lastRegion=rg.name; showRegion(rg.name, rg.sub);
+  if (fresh) setTimeout(()=>toast(isTouch?'Arrastra a la izquierda para moverte. «Usar» para interactuar.':'Muévete con WASD o flechas. E para interactuar. Tab abre tu cuaderno.'), 1800);
+}
+$('tNew').addEventListener('click', ()=>{ Snd.init(); newGame(); });
+$('tContinue').addEventListener('click', ()=>{ Snd.init(); const sv=loadSave(); if (!sv) return; resetWorldEnts(); S=loadSave(); S.listening=false; $('title').classList.add('hidden'); beginPlay(false); });
+$('tControls').addEventListener('click', ()=>openSettings('controls','title'));
+$('tSettings').addEventListener('click', ()=>openSettings('settings','title'));
+
+let last=performance.now();
+let wasPlaying=null;
+function frame(t){
+  const dt=Math.min(.05,(t-last)/1000); last=t;
+  if ((mode==='play')!==wasPlaying){ wasPlaying=mode==='play'; document.body.classList.toggle('playing',wasPlaying); }
+  if (mode==='title'||mode==='intro'){
+    if (!S) S=newState();
+    cam.x=34+Math.sin(now*.05)*10; cam.y=30+Math.cos(now*.04)*6;
+    now+=dt; S.time=(S.time+dt/90)%1;
+    updateNPCs(dt); updateVids(dt,0);
+  } else {
+    update(dt);
+    const tx=S.p.x, ty=S.p.y-.6;
+    cam.x=lerp(cam.x,tx,Math.min(1,dt*6)); cam.y=lerp(cam.y,ty,Math.min(1,dt*6));
+  }
+  render();
+  requestAnimationFrame(frame);
+}
+
+genWorld();
+buildEntities();
+placeTrees();
+buildPrints();
+paintGround();
+resize();
+applySettings();
+S=newState(); S.time=.55;
+toTitle();
+// recarga en caliente del visor: conservar la partida
+if (window.claude && window.claude.hot){
+  try{ window.claude.hot.snapshot(()=>({save: S && mode!=='title' ? serialize() : null})); }catch(e){}
+  const boot = data => { if (data && data.save){ try{ S=deserialize(data.save); $('title').classList.add('hidden'); beginPlay(false); }catch(e){} } };
+  try{ window.claude.hot.ready ? window.claude.hot.ready(boot) : boot(window.claude.hot.data||{}); }catch(e){}
+}
+window.__kolo = { get S(){return S;}, get mode(){return mode;}, ents, tileAt, run, hear, showEnding, setF };
+requestAnimationFrame(frame);
+})();
+</script>
+<!--ARTIFACT-BODY-END-->
+</body>
+</html>
