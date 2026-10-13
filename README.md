@@ -1,18 +1,31 @@
-# KOLOTOPIR — Capítulo I: Los Prados que Recuerdan
+# KOLOTOPIR — Capítulo I: Los Ecos de los Prados
 
-Juego de navegador basado en el *Dossier completo del mundo de Orom*. Es el «vertical slice» que propone la hoja de ruta del dossier: una zona pequeña, un Kolotapir, Resonancias, un puzle, una historia secundaria y una revelación.
+Juego de acción por misiones en el navegador, ambientado en el mundo de Orom del *Dossier completo*. Los recuerdos rotos se han vuelto **Ecos** hostiles y Nilo los dispersa con el amuleto de su madre.
 
 Abre `index.html` en cualquier navegador moderno. No hace falta instalar nada.
 
-## Qué incluye
-- **Nilo y la Tribu del Reverso**: la carta de Eira y Daren, el amuleto, Teia, Lio y Maru.
-- **Escucha de Resonancias** (Q): fragmentos ambientales, personales, materiales, contradictorios y profundos. Las huellas de los padres solo se ven al escuchar.
-- **Misterio del campamento**: reúne pistas y formula una hipótesis en el cuaderno. Equivocarse no penaliza y hay pistas graduales.
-- **Kolotapires**: Boro y su colección de objetos inútiles (con una decisión sobre privacidad y consentimiento), Pim y Tolo discutiendo el nombre de una nube, Madre Oru.
-- **Criaturas**: vidrieros que huyen o se acercan si vas agachado, y el musgoso del puente, que se puede calmar con la flor de eco o esquivar de noche.
-- **Cápsulas** en sus cinco estados: Estable, Inactiva, Dañada, Sellada y Anómala.
-- Ciclo día/noche, rutinas de NPC, Miga como ayudante, cuaderno con atlas y un final que resume tus decisiones y anticipa los tres finales del juego.
-- Accesibilidad: tamaño de texto, reducir movimiento, indicador visual de sonidos, alto contraste y controles táctiles.
+## Mecánicas
+- **Golpe de resonancia** cuerpo a cuerpo (J / clic), con triple de daño por la espalda a enemigos desprevenidos.
+- **Onda** a distancia (K / clic derecho) que gasta energía y destruye proyectiles.
+- **Esquiva** (Espacio) con invulnerabilidad durante el impulso.
+- **Escucha** (Q): revela glifos y alijos de memoria ocultos y gasta energía.
+- Vida en corazones, energía, fragmentos de memoria ◆ y mejoras en la tienda de Boro.
+- Enemigos: Ecos, polillas de papel, tiradores, Ecos pesados que embisten, nidos y Centinelas con cono de visión.
+
+## Misiones
+1. Primeros pasos: entrenamiento con muñecos y anillos contrarreloj.
+2. La puerta recuerda: exploración con la Escucha.
+3. Nidos de Ecos: combate.
+4. Tolo tiene prisa: escolta con emboscadas.
+5. La colección de Boro: caza de Ecos pesados.
+6. Flores de eco: contrarreloj nocturno.
+7. El fuego de Boro: defensa por oleadas.
+8. **Jefe:** el Eco de la Vigilia, con anillos de proyectiles, espirales, teletransporte y embestidas.
+9. Centinelas en el camino: sigilo, con bonificación si nadie te ve.
+10. **Jefe:** el Musgoso Corrompido. Haz que embista contra el borde y golpéalo aturdido.
+11. **Jefe final:** el Centinela Mayor, con escudo de pilones y rayo giratorio.
+
+Extra: la **Arena de las Gargantas Silentes**, con 10 oleadas y récord, y 10 alijos ocultos.
 
 ## Controles
-WASD/flechas para moverse · Mayús para correr · C para agacharse · E para interactuar · Q para escuchar · Tab para el cuaderno · M para el atlas · Esc para pausa.
+WASD o flechas para moverse · ratón para apuntar · J / clic para golpear · K / clic derecho para la onda · Espacio para esquivar · Q para escuchar · E para hablar o descansar · Tab para misiones · M para el mapa · Esc para pausa. Tiene controles táctiles y un modo de dificultad relajada.
